@@ -1,0 +1,28 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 本地数据库与密钥（勿提交）
+*.db
+.env
+.env.*
+
+# IDE / 系统
+.idea/
+.cursor/
+.DS_Store
+*.swp
+
+# Mac 客户端构建产物与依赖
+clients/mac-electron/node_modules/
+clients/mac-electron/dist/
+clients/mac-electron/static/
+
+# 日志与调试
+logs/
+*.log

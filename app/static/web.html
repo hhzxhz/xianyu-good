@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>鲸吸购 · 闲鱼抢购 Web 控制台</title>
+  <style>
+    :root {
+      --bg0: #0f172a;
+      --bg1: #1e293b;
+      --card: rgba(30, 41, 59, 0.92);
+      --accent: #0ea5e9;
+      --accent2: #06b6d4;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "PingFang SC", sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--bg0) 0%, var(--bg1) 45%, #334155 100%);
+      line-height: 1.6;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+    .hero {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .hero h1 {
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      letter-spacing: 0.02em;
+    }
+    .hero p { color: var(--muted); margin: 0; font-size: 0.95rem; }
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+    }
+    .card h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--muted); font-weight: 600; }
+    .card ul { margin: 0; padding-left: 1.25rem; color: var(--text); font-size: 0.9rem; }
+    .card li { margin-bottom: 0.35rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1.5rem; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.65rem 1.4rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+    }
+    .btn-secondary {
+      color: var(--text);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>鲸吸购 · Web 控制台</h1>
+      <p>多设备接入 · 关键词抢购 · 统计与记录 · 浏览器即可管理</p>
+    </header>
+
+    <section class="card">
+      <h2>网页端能做什么</h2>
+      <ul>
+        <li>登录后管理已接入手机、创建/启停抢购任务、查看控制台日志</li>
+        <li>查看售出统计、抢购记录与解析到的商品列表</li>
+        <li>管理员可管理用户；匹配到规则商品时可在任务页收到弹窗提醒</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>使用前请确认</h2>
+      <ul>
+        <li>本服务运行在您的电脑上，手机需 USB 连接并开启调试（与 README 一致）</li>
+        <li>自动化仍由本机 ADB + uiautomator2 执行，浏览器只负责配置与观测</li>
+      </ul>
+    </section>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="/admin">进入后台管理</a>
+      <a class="btn btn-secondary" href="/docs">OpenAPI 文档</a>
+    </div>
+
+    <footer>与 <code>/admin</code> 为同一套功能；本页为 Web 入口说明。</footer>
+  </div>
+</body>
+</html>

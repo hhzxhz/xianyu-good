@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>服务端地址</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 1rem; margin: 0; background: #1a1d23; color: #e2e8f0; }
+    label { display: block; font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.35rem; }
+    input { width: 100%; box-sizing: border-box; padding: 0.5rem 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: #0f1419; color: #e2e8f0; font-size: 0.9rem; }
+    button { margin-top: 0.75rem; padding: 0.45rem 1rem; border: none; border-radius: 6px; background: #3b82f6; color: #fff; cursor: pointer; font-size: 0.875rem; }
+    button:hover { filter: brightness(1.08); }
+    p.hint { font-size: 0.75rem; color: #64748b; margin: 0.5rem 0 0; line-height: 1.4; }
+    code { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <label for="url">服务端根地址（含端口，无末尾 /）</label>
+  <input id="url" type="text" placeholder="http://192.168.1.10:8000" autocomplete="off" />
+  <p class="hint">与运行 uvicorn 的机器一致；本机示例：<code>http://127.0.0.1:8000</code></p>
+  <button type="button" id="save">保存并重新加载控制台</button>
+  <script>
+    (async function () {
+      var c = await window.xianyuSettings.load();
+      document.getElementById('url').value = (c && c.apiBase) ? c.apiBase : '';
+      document.getElementById('save').onclick = async function () {
+        var v = document.getElementById('url').value.trim().replace(/\/$/, '');
+        await window.xianyuSettings.save(v || 'http://127.0.0.1:8000');
+      };
+    })();
+  </script>
+</body>
+</html>

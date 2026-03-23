@@ -1,0 +1,26 @@
+# 建议使用 Python 3.10 / 3.11 / 3.12（3.14 下 pydantic-core 无预编译包会编译失败）
+# setuptools 82+ 已移除 pkg_resources，adbutils/u2 依赖它，故固定到 82 以下
+setuptools>=65.0.0,<82
+# Web 后台
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+
+# 数据库
+sqlalchemy==2.0.25
+aiosqlite==0.19.0
+
+# Android 自动化（需手机开启 USB 调试并安装 atx-agent）
+uiautomator2>=3.0.0
+adbutils==2.2.1
+
+# 闲鱼网页通道（goofish）：安装后需执行 playwright install chromium
+playwright>=1.40.0,<2
+
+# 工具
+pydantic==2.6.1
+pydantic-settings==2.1.0
+
+# 认证（bcrypt>=4.1 移除了 __about__，passlib 1.7.4 会报错，故固定到 4.0.x）
+passlib[bcrypt]==1.7.4
+bcrypt>=3.2.0,<4.1
+python-jose[cryptography]==3.3.0

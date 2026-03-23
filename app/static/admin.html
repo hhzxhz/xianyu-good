@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>鲸吸购 - 后台管理</title>
+  <style>
+    :root { --bg: #1a1d23; --card: #252830; --accent: #3b82f6; --text: #e2e8f0; --muted: #94a3b8; --danger: #ef4444; --success: #22c55e; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; line-height: 1.5; }
+    .layout-wrap { display: flex; min-height: 100vh; }
+    .sidebar { width: 200px; flex-shrink: 0; background: var(--card); padding: 1rem 0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.06); transition: width 0.2s ease; }
+    .sidebar.collapsed { width: 56px; }
+    .sidebar.collapsed .sidebar-brand .logo { display: none; }
+    .sidebar.collapsed .sidebar-brand .title { display: none; }
+    .sidebar.collapsed .sidebar-brand .sidebar-toggle { margin-left: 0; }
+    .sidebar.collapsed .nav a .nav-text { display: none; }
+    .sidebar.collapsed .nav a .nav-short { display: inline; }
+    .sidebar.collapsed .sidebar-user .user-name { display: none; }
+    .sidebar.collapsed .sidebar-logout { font-size: 0; line-height: 0; padding: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+    .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 0.75rem; flex-wrap: nowrap; min-width: 0; }
+    .sidebar.collapsed .sidebar-brand { padding: 0 0.35rem 1rem; justify-content: center; }
+    .sidebar-brand .logo { width: 36px; height: 36px; flex-shrink: 0; }
+    .sidebar-brand .title { font-size: 1rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+    .sidebar-toggle { margin-left: auto; padding: 0.25rem; background: none; border: none; color: var(--muted); cursor: pointer; border-radius: 4px; transition: transform 0.2s, color 0.2s; }
+    .sidebar-toggle:hover { color: var(--text); }
+    .sidebar.collapsed .sidebar-toggle { transform: rotate(180deg); }
+    .nav a .nav-short { display: none; font-size: 1rem; }
+    .sidebar.collapsed .nav a { justify-content: center; padding: 0.5rem; }
+    .nav { display: flex; flex-direction: column; gap: 0.25rem; padding: 0 0.5rem; flex: 1; }
+    .nav a { display: flex; align-items: center; padding: 0.5rem 0.75rem; border-radius: 6px; color: var(--muted); text-decoration: none; transition: background .15s, color .15s; }
+    .nav a:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .nav a.active { background: var(--accent); color: #fff; }
+    .sidebar-footer { padding: 0.75rem 1rem 0 1rem; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.06); text-align: left; }
+    .sidebar-user { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0; cursor: pointer; border-radius: 6px; color: var(--muted); transition: background .15s, color .15s; }
+    .sidebar-user:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .sidebar-user .user-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; flex-shrink: 0; }
+    .sidebar-user .user-name { font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-logout { margin-top: 0.25rem; font-size: 0.75rem; color: var(--muted); cursor: pointer; }
+    .sidebar-logout:hover { color: var(--danger); text-decoration: underline; }
+    .main { flex: 1; padding: 1rem; overflow: auto; min-width: 0; }
+    h1 { font-size: 1.25rem; margin: 0 0 1rem; color: var(--text); }
+    h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--muted); font-weight: 600; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .main a:hover { text-decoration: underline; }
+    .card { background: var(--card); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    th { color: var(--muted); font-weight: 500; }
+    button, input, select { font-size: 0.875rem; }
+    button { cursor: pointer; background: var(--accent); color: #fff; border: none; padding: 0.4rem 0.75rem; border-radius: 6px; }
+    button:hover { filter: brightness(1.1); }
+    button.danger { background: var(--danger); }
+    button.small { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    input, select { padding: 0.4rem 0.6rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; background: var(--bg); color: var(--text); }
+    .form-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .form-row label { min-width: 5rem; }
+    .msg { padding: 0.5rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.875rem; }
+    .msg.err { background: rgba(239,68,68,0.2); color: #fca5a5; }
+    .msg.ok { background: rgba(34,197,94,0.2); color: #86efac; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; }
+    .badge.run { background: var(--success); color: #000; }
+    .badge.stop { background: var(--muted); color: #000; }
+    .badge.me { background: var(--success); color: #000; }
+    .badge.other { background: var(--danger); color: #fff; }
+    /* 设备表：启用/停用状态与操作按钮分色，避免与删除红钮混淆 */
+    .badge.phone-on { background: rgba(34, 197, 94, 0.35); color: #bbf7d0; border: 1px solid rgba(34, 197, 94, 0.45); }
+    .badge.phone-off { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35); }
+    button.small.btn-phone-disable { background: #d97706; color: #fff; }
+    button.small.btn-phone-disable:hover { filter: brightness(1.08); }
+    button.small.btn-phone-enable { background: #059669; color: #fff; }
+    button.small.btn-phone-enable:hover { filter: brightness(1.08); }
+    .panel { display: none; }
+    .panel.show { display: block; }
+    .stats-section-divider { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.12); }
+    #console-output { font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace; }
+    #console-output .console-latest { display: block; background: rgba(234,179,8,0.2); color: #fef08a; margin: 0 -0.75rem; padding: 0.25rem 0.75rem; border-left: 3px solid rgba(234,179,8,0.8); }
+    .match-alert-body { margin: 0.5rem 0; font-size: 0.9rem; line-height: 1.5; }
+    .match-alert-body .match-row { margin-bottom: 0.35rem; }
+    .match-alert-body .match-label { color: var(--muted); margin-right: 0.25rem; }
+    .match-alert-body .match-highlight { background: rgba(234,179,8,0.35); color: #fef08a; padding: 0.1em 0.25em; border-radius: 3px; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; overflow-y: auto; padding: 1rem; }
+    .modal.show { display: flex; }
+    .modal-inner { background: var(--card); padding: 1.25rem; border-radius: 8px; min-width: 320px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; }
+    /* 规则表侧边栏式滑动：固定高度、内部滚动 */
+    .rules-scroll { max-height: 42vh; overflow-y: auto; overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; margin-top: 0.25rem; }
+    .rules-scroll table { margin: 0; }
+    /* 商品描述：悬浮展示全部、可选中复制 */
+    .desc-cell { position: relative; max-width: 200px; }
+    .desc-cell .desc-short { cursor: help; }
+    .desc-cell .desc-popover { display: none; position: absolute; left: 0; top: 100%; z-index: 20; margin-top: 2px; padding: 0.5rem; background: var(--card); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); max-width: 360px; max-height: 200px; overflow: auto; }
+    .desc-cell:hover .desc-popover { display: block; }
+    .desc-cell .desc-popover-text { white-space: pre-wrap; word-break: break-all; user-select: text; font-size: 0.8rem; margin-bottom: 0.5rem; }
+    .desc-cell .copy-btn { margin-top: 0.25rem; }
+    /* 登录页：参考图样式 - 深色渐变、标签+输入框、蓝色渐变主按钮、底部三链接 */
+    .login-wrap {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 35%, #334155 100%);
+    }
+    .login-card {
+      background: transparent;
+      padding: 2rem; border-radius: 12px; min-width: 320px; max-width: 400px; width: 100%;
+    }
+    .login-card .login-title {
+      text-align: center; font-size: 1.75rem; margin: 0 0 2rem; color: #fff; font-weight: 700; letter-spacing: 0.02em;
+    }
+    .login-page { display: none; }
+    .login-page.show { display: block; }
+    .login-form .form-row {
+      margin-bottom: 1rem; align-items: center; display: flex; gap: 0.75rem;
+    }
+    .login-form .form-row label {
+      min-width: 4.5rem; color: #fff; font-size: 0.9375rem;
+    }
+    .login-form .form-row input {
+      flex: 1; min-width: 0; padding: 0.6rem 0.85rem; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.25);
+      color: #fff; font-size: 0.9375rem;
+    }
+    .login-form .form-row input::placeholder { color: rgba(255,255,255,0.45); }
+    .login-form .code-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .login-form .code-row input { flex: 1; min-width: 100px; }
+    .login-form .code-row .btn-code {
+      flex-shrink: 0; padding: 0.6rem 1rem; border-radius: 8px; font-weight: 500;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      border: none; color: #fff; cursor: pointer; box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+    }
+    .login-form .code-row .btn-code:hover { filter: brightness(1.08); }
+    .login-form .btn-login-wrap { margin-top: 1.25rem; }
+    .login-form .btn-login-wrap button {
+      width: 100%; padding: 0.65rem 1.25rem; border-radius: 8px; font-weight: 500; font-size: 1rem;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+      border: none; color: #fff; cursor: pointer; box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+    }
+    .login-form .btn-login-wrap button:hover { filter: brightness(1.08); }
+    .login-form .login-mode-switch {
+      margin-top: 1.75rem; display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.875rem; color: rgba(255,255,255,0.75);
+    }
+    .login-form .login-mode-switch span { cursor: pointer; }
+    .login-form .login-mode-switch span.active { color: #fff; font-weight: 500; }
+    .login-form .login-mode-switch span:not(.active):hover { color: rgba(255,255,255,0.9); }
+    .login-form .login-mode-switch a { color: rgba(255,255,255,0.75); text-decoration: none; }
+    .login-form .login-mode-switch a:hover { color: #fff; }
+    .login-card .msg.err { background: rgba(239,68,68,0.25); color: #fca5a5; }
+    .login-card .msg.ok { background: rgba(34,197,94,0.25); color: #86efac; }
+    /* 后台主界面与登录页样式一致：同背景 + 卡片风格 */
+    #app-wrap {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #334155 100%);
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230ea5e9' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #334155 100%);
+    }
+    #app-wrap .sidebar {
+      background: rgba(30, 41, 59, 0.92); backdrop-filter: blur(12px);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+      border-left: none; border-radius: 0 12px 12px 0;
+    }
+    #app-wrap .main .card {
+      background: rgba(30, 41, 59, 0.92); backdrop-filter: blur(12px);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+    }
+    #app-wrap .modal-inner { border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); }
+    /* 窄屏：侧栏置顶、导航横排，便于手机浏览器使用 */
+    @media (max-width: 768px) {
+      #app-wrap.layout-wrap { flex-direction: column; }
+      #app-wrap .sidebar {
+        width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center;
+        padding: 0.5rem 0.75rem; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-radius: 0;
+      }
+      #app-wrap .sidebar-brand { border-bottom: none; margin-bottom: 0; padding-bottom: 0.5rem; flex: 1 1 auto; min-width: 0; }
+      #app-wrap .nav { flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; padding: 0.25rem 0 0; gap: 0.15rem; }
+      #app-wrap .nav a { padding: 0.35rem 0.6rem; font-size: 0.8rem; }
+      #app-wrap .sidebar-footer { border-top: none; padding: 0.35rem 0 0; margin-top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+      #app-wrap .main { padding: 0.75rem; }
+      #app-wrap table { font-size: 0.75rem; }
+      #app-wrap th, #app-wrap td { padding: 0.35rem 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 登录页：未登录时显示；验证码登录与管理员登录为两个独立视图 -->
+  <div id="login-wrap" class="login-wrap" style="display:none;">
+    <div class="login-card">
+      <div id="login-page-code" class="login-page show">
+        <h1 class="login-title">鲸吸购·登录</h1>
+        <div id="login-msg" class="msg" style="display:none;margin-bottom:0.75rem;border-radius:8px;"></div>
+        <div id="form-code" class="login-form">
+          <div class="form-row"><label>手机号</label><input type="text" id="code-phone_or_email" placeholder="请输入手机号"/></div>
+          <div class="form-row code-row">
+            <label>验证码</label>
+            <input type="text" id="code-code" placeholder="6位数字" maxlength="6"/>
+            <button type="button" class="btn-code" onclick="sendCode()">获取验证码</button>
+          </div>
+          <span id="code-sent-msg" style="display:block;font-size:0.8rem;color:rgba(255,255,255,0.6);margin-top:-0.25rem;margin-bottom:0.25rem;min-height:1.2em;"></span>
+          <div class="btn-login-wrap"><button type="button" onclick="loginByCode()">登录</button></div>
+          <div class="login-mode-switch">
+            <span id="mode-phone" class="active">手机登录</span>
+            <span id="mode-email">邮箱登录</span>
+            <a href="#" id="link-to-admin-login">管理员登录</a>
+          </div>
+        </div>
+      </div>
+      <div id="login-page-admin" class="login-page">
+        <h1 class="login-title">鲸吸购·管理员登录</h1>
+        <div id="login-msg-admin" class="msg" style="display:none;margin-bottom:0.75rem;border-radius:8px;"></div>
+        <div id="form-admin" class="login-form">
+          <div class="form-row"><label>用户名</label><input type="text" id="admin-username" placeholder="请输入用户名"/></div>
+          <div class="form-row"><label>密码</label><input type="password" id="admin-password" placeholder="请输入密码"/></div>
+          <div class="btn-login-wrap"><button type="button" onclick="loginByPwd()">登录</button></div>
+          <div class="login-mode-switch" style="justify-content:center;">
+            <a href="#" id="link-to-code-login">返回验证码登录</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-wrap" class="layout-wrap" style="display:none;">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <svg class="logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#0ea5e9"/>
+              <stop offset="100%" style="stop-color:#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
+          <!-- 鱼身 -->
+          <ellipse cx="14" cy="18" rx="6" ry="5" fill="rgba(255,255,255,0.95)"/>
+          <!-- 鱼尾 -->
+          <path d="M20 14v8l6-4-6-4z" fill="rgba(255,255,255,0.9)"/>
+          <!-- 闪电/抢购 -->
+          <path d="M24 11l-3 5h2l-2 6 4-5h-2l3-6z" fill="rgba(255,255,255,0.95)"/>
+        </svg>
+        <span class="title">鲸吸购</span>
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" title="折叠侧栏" aria-label="折叠侧栏">◀</button>
+      </div>
+      <nav class="nav">
+        <a href="#" class="nav-link active" data-panel="phones" title="手机管理"><span class="nav-short">手</span><span class="nav-text">手机管理</span></a>
+        <a href="#" class="nav-link" data-panel="tasks" title="任务管理"><span class="nav-short">任</span><span class="nav-text">任务管理</span></a>
+        <a href="#" class="nav-link" data-panel="stats" title="售出商品统计"><span class="nav-short">售</span><span class="nav-text">售出商品统计</span></a>
+        <a href="#" class="nav-link nav-admin" data-panel="users" style="display:none;" title="用户管理"><span class="nav-short">用</span><span class="nav-text">用户管理</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user" id="sidebar-user" title="个人资料">
+          <div class="user-icon" aria-hidden="true">👤</div>
+          <span class="user-name" id="sidebar-user-name">-</span>
+        </div>
+        <div class="sidebar-logout" id="sidebar-logout">退出登录</div>
+      </div>
+    </aside>
+    <main class="main">
+  <div id="msg" class="msg" style="display:none;"></div>
+
+  <div id="match-alert-modal" class="modal">
+    <div class="modal-inner" style="max-width:420px">
+      <h2 style="color:var(--success)">识别到符合条件的商品</h2>
+      <p id="match-alert-conditions" style="color:#e63946;font-size:0.9rem;margin:0.25rem 0 0 0;font-weight:500;"></p>
+      <div id="match-alert-body" class="match-alert-body"></div>
+      <button type="button" onclick="closeMatchAlertAndShowNext()">确定</button>
+    </div>
+  </div>
+
+  <!-- 首次登录/信息未完善时引导补全手机或邮箱 -->
+  <div id="profile-complete-modal" class="modal">
+    <div class="modal-inner" style="max-width:380px">
+      <h2 style="margin:0 0 0.5rem">完善个人信息</h2>
+      <p style="font-size:0.875rem;color:var(--muted);margin:0 0 1rem">请至少填写手机或邮箱，便于接收通知</p>
+      <div class="form-row"><label>手机</label><input type="text" id="profile-complete-phone" placeholder="选填"/></div>
+      <div class="form-row"><label>邮箱</label><input type="text" id="profile-complete-email" placeholder="选填"/></div>
+      <div id="profile-complete-msg" class="msg" style="display:none;margin-bottom:0.5rem"></div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+        <button type="button" class="danger" onclick="closeProfileCompleteModal()">暂不填写</button>
+        <button type="button" onclick="submitProfileComplete()">提交</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="new-task-modal" class="modal">
+    <div class="modal-inner" style="max-width:520px">
+      <h2>新建任务</h2>
+      <p style="color:var(--muted);font-size:0.8rem;margin:0 0 0.5rem">同一手机可配置多个任务，每个任务独立搜索词与规则。</p>
+      <div class="form-row"><label>通道</label><select id="new-task-channel" title="App=USB手机自动化；网页=goofish.com + 浏览器" onchange="filterNewTaskPhones()"><option value="app">手机 App</option><option value="web">闲鱼网页</option></select></div>
+      <div class="form-row"><label>设备</label><select id="new-task-phone_id"><option value="">请先接入手机或创建网页环境</option></select></div>
+      <div class="form-row"><label>名称</label><input type="text" id="new-task-name" placeholder="可选"></div>
+      <div class="form-row"><label>搜索词</label><input type="text" id="new-task-keyword" placeholder="必填"></div>
+      <div class="form-row"><label>刷新时间(秒)</label><input type="number" id="new-task-refresh-interval" min="1" max="60" value="3" style="width:5rem" title="新发页列表刷新间隔，1-60"></div>
+      <div class="form-row"><label>运行模式</label><select id="new-task-run_mode" title="从App开始定位=首页→搜索→新发；仅新发与降价=不执行搜索，仅在当前新发/降价页刷新"><option value="from_app">从 App 开始定位</option><option value="new_drop_only">仅新发与降价</option></select></div>
+      <h3 style="font-size:0.9rem;margin:0.75rem 0 0.25rem;color:var(--muted)">抢购规则（多条满足任一条即抢，每条内关键字且+价格区间）</h3>
+      <div class="rules-scroll">
+        <table><thead><tr><th>顺序</th><th>描述关键字（逗号分隔且）</th><th>最低价</th><th>最高价</th><th></th></tr></thead><tbody id="new-rules-tbody"></tbody></table>
+      </div>
+      <button type="button" class="small" onclick="addNewRuleRow()" style="margin-top:0.25rem">+ 添加一条规则</button>
+      <div class="form-row" style="margin-top:0.75rem">
+        <button type="button" onclick="addTask()">保存</button>
+        <button type="button" class="danger" onclick="closeNewTaskModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-task-modal" class="modal">
+    <div class="modal-inner" style="max-width:520px">
+      <h2>编辑任务</h2>
+      <input type="hidden" id="edit-task-id">
+      <div class="form-row"><label>通道</label><select id="edit-task-channel" title="切换后请选择对应设备" onchange="filterEditTaskPhones()"><option value="app">手机 App</option><option value="web">闲鱼网页</option></select></div>
+      <div class="form-row"><label>设备</label><select id="edit-task-phone_id"></select></div>
+      <p style="font-size:0.75rem;color:var(--muted);margin:0 0 0.5rem">网页通道需绑定「闲鱼网页」环境；App 通道选 USB 手机。</p>
+      <div class="form-row"><label>名称</label><input type="text" id="edit-name" placeholder="可选"></div>
+      <div class="form-row"><label>搜索词</label><input type="text" id="edit-keyword" placeholder="必填"></div>
+      <div class="form-row"><label>刷新时间(秒)</label><input type="number" id="edit-refresh-interval" min="1" max="60" value="3" style="width:5rem" title="新发页列表刷新间隔，1-60"></div>
+      <div class="form-row"><label>运行模式</label><select id="edit-run_mode" title="从App开始定位=首页→搜索→新发；仅新发与降价=不执行搜索，仅在当前新发/降价页刷新"><option value="from_app">从 App 开始定位</option><option value="new_drop_only">仅新发与降价</option></select></div>
+      <h3 style="font-size:0.9rem;margin:0.75rem 0 0.25rem;color:var(--muted)">抢购规则（多条满足任一条即抢，每条内关键字且+价格区间）</h3>
+      <div class="rules-scroll">
+        <table><thead><tr><th>顺序</th><th>描述关键字（逗号分隔且）</th><th>最低价</th><th>最高价</th><th></th></tr></thead><tbody id="edit-rules-tbody"></tbody></table>
+      </div>
+      <button type="button" class="small" onclick="addEditRuleRow()" style="margin-top:0.25rem">+ 添加一条规则</button>
+      <div class="form-row" style="margin-top:0.75rem">
+        <button type="button" onclick="saveTaskEdit()">保存</button>
+        <button type="button" class="danger" onclick="document.getElementById('edit-task-modal').classList.remove('show')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 手机管理 -->
+  <div id="panel-phones" class="panel show card">
+    <h2>已接入手机</h2>
+    <table>
+      <thead><tr><th>ID</th><th>设备 ID</th><th>备注</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="phones-tbody"></tbody>
+    </table>
+    <h2 style="margin-top:1rem">闲鱼网页运行环境</h2>
+    <p style="color:var(--muted);font-size:0.875rem">网页抢购任务需绑定此处创建的「网页」槽位（无需 USB）。首次使用请配置服务端登录态，见 README。</p>
+    <button type="button" onclick="ensureWebPhone()">创建 / 获取网页环境</button>
+    <h2 style="margin-top:1rem">接入新手机</h2>
+    <p style="color:var(--muted);font-size:0.875rem">先点「刷新 USB 设备」，再从下拉选 device_id 或手动填写。</p>
+    <button type="button" onclick="loadAdbDevices()">刷新 USB 设备</button>
+    <div id="adb-list" style="margin-top:0.5rem;font-size:0.875rem"></div>
+    <div class="form-row" style="margin-top:0.75rem">
+      <label>设备 ID</label><input type="text" id="new-phone-device_id" placeholder="ADB serial">
+      <label>备注</label><input type="text" id="new-phone-nickname" placeholder="可选">
+      <button type="button" onclick="addPhone()">接入</button>
+    </div>
+  </div>
+
+  <!-- 任务管理 -->
+  <div id="panel-tasks" class="panel card">
+    <h2>抢购任务</h2>
+    <p style="color:var(--muted);font-size:0.8rem;margin:0 0 0.5rem">同一手机可配置多个任务，单次仅允许一个任务运行。</p>
+    <div class="form-row" style="margin-bottom:0.5rem;flex-wrap:wrap;align-items:center;gap:0.5rem">
+      <button type="button" onclick="openNewTaskModal()">新建任务</button>
+      <button type="button" onclick="refreshTasksPanel()">刷新</button>
+      <span id="tasks-batch-bar" style="display:none;align-items:center;gap:0.5rem;margin-left:0.25rem">
+        <button type="button" class="small btn-phone-disable" onclick="tasksBatchStop()">批量停止</button>
+        <button type="button" class="small danger" onclick="tasksBatchDelete()">批量删除</button>
+      </span>
+    </div>
+    <div style="margin-bottom:1rem;padding:0.85rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(0,0,0,0.15)">
+      <h3 style="margin:0 0 0.4rem;font-size:0.95rem;color:var(--text)">网页通道 · 从 cURL 提取登录</h3>
+      <p style="color:var(--muted);font-size:0.78rem;margin:0 0 0.5rem;line-height:1.45">
+        在 Chrome 开发者工具中对任意 <code style="color:var(--accent)">goofish.com</code> / <code style="color:var(--accent)">h5api.m.goofish.com</code> 请求右键 <strong>复制 → 复制为 cURL</strong>，将<strong>整段</strong>粘贴到下方。点击「解析并应用」后写入服务端内存，<strong>优先于</strong> .env 中的 <code>WEB_STORAGE_STATE_PATH</code> / <code>WEB_CURL_COOKIE_FILE</code>。
+        正在运行的<strong>网页抢购任务</strong>会在下一轮循环自动关闭并重启浏览器以应用新 Cookie。
+      </p>
+      <p style="color:#fbbf24;font-size:0.76rem;margin:0 0 0.5rem;line-height:1.45">
+        <strong>请勿</strong>在终端直接执行该 cURL 去请求 h5api（<code>mtop…</code> 的 <code>sign</code>/<code>t</code> 会过期，且易返回 404/风控）。此处<strong>只提取 Cookie</strong> 给内置浏览器用，不重放该 HTTP 请求。
+      </p>
+      <textarea id="web-curl-input" placeholder="curl 'https://www.goofish.com/...' -H 'cookie: ...' ..." style="width:100%;min-height:88px;font-family:ui-monospace,monospace;font-size:0.72rem;background:var(--bg);color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:0.45rem;box-sizing:border-box;resize:vertical"></textarea>
+      <div class="form-row" style="margin-top:0.45rem;margin-bottom:0">
+        <button type="button" onclick="applyWebCurl()">解析并应用</button>
+        <button type="button" class="danger small" onclick="clearWebSession()">清除内存登录态</button>
+      </div>
+      <div id="web-session-msg" class="msg" style="display:none;margin-top:0.45rem"></div>
+      <p id="web-session-status" style="margin:0.45rem 0 0;font-size:0.78rem;color:var(--muted)">登录态：未加载</p>
+    </div>
+    <table>
+      <thead><tr><th style="width:2rem"><input type="checkbox" id="tasks-check-all" title="全选" onclick="toggleTasksCheckAll(this)"/></th><th>ID</th><th>名称</th><th>通道</th><th>手机</th><th>搜索词</th><th>刷新</th><th title="从App开始定位=首页→搜索→新发；仅新发与降价=不执行搜索，仅在当前新发/降价页刷新">运行模式</th><th>规则</th><th>运行</th><th>操作</th></tr></thead>
+      <tbody id="tasks-tbody"></tbody>
+    </table>
+    <h2 style="margin-top:1rem">运行控制台</h2>
+    <p style="color:var(--muted);font-size:0.8rem">不自动刷新，请点击上方「刷新」按需加载任务列表与控制台。</p>
+    <p style="color:var(--danger);font-size:0.8rem;margin-bottom:0.5rem">若日志提示无法识别闲鱼，请将闲鱼 App 切到手机前台并关闭其他浮窗/多任务。</p>
+    <div class="form-row">
+      <label>任务</label>
+      <select id="console-task-id"><option value="">全部</option></select>
+    </div>
+    <div id="console-no-product-alert" style="display:none;color:#e63946;font-size:0.9rem;font-weight:600;margin-bottom:0.5rem;"></div>
+    <pre id="console-output" style="background:#0d1117;color:#c9d1d9;padding:0.75rem;border-radius:6px;max-height:280px;overflow:auto;font-size:0.8rem;margin-top:0.5rem;white-space:pre-wrap;word-break:break-all;"></pre>
+    <div id="console-screenshot-wrap" style="margin-top:0.5rem;display:none;">
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.25rem">无法刷新时的手机截图</div>
+      <img id="console-screenshot" alt="手机截图" style="max-width:100%;max-height:240px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);display:block;background:#0d1117;"/>
+    </div>
+  </div>
+
+  <!-- 售出商品统计 -->
+  <div id="panel-stats" class="panel card">
+    <h2>售出商品统计</h2>
+    <div id="stats-summary" style="font-size:0.875rem;color:var(--muted)">加载中…</div>
+    <h2 style="margin-top:1rem">记录列表</h2>
+    <div class="form-row">
+      <label>任务</label><select id="stats-task_id"><option value="">全部</option></select>
+      <label>状态</label><select id="stats-status"><option value="">全部</option><option value="grabbed_by_me">我抢到</option><option value="grabbed_by_other">被抢</option></select>
+      <label>每页</label><select id="records-page_size"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select>
+      <button type="button" onclick="recordsPage=1;loadRecords()">查询</button>
+      <button type="button" class="danger small" id="records-batch-del-btn" onclick="deleteRecordsBatch()" style="display:none">批量删除</button>
+    </div>
+    <table style="margin-top:0.5rem">
+      <thead><tr><th><input type="checkbox" id="records-check-all" onclick="toggleRecordsCheckAll(this)"/></th><th>ID</th><th>任务 ID/名称</th><th>标题/商品</th><th>价格</th><th>结果</th><th>时间</th><th>操作</th></tr></thead>
+      <tbody id="records-tbody"></tbody>
+    </table>
+    <div id="records-pagination" style="margin-top:0.5rem;font-size:0.875rem;color:var(--muted)"></div>
+
+    <div class="stats-section-divider">
+    <h2>解析到的商品</h2>
+    <p style="color:var(--muted);font-size:0.8rem;margin:0 0 0.5rem">任务运行后在新发页每 3s 解析前 3 个商品并<strong>记录到本统计页</strong>，同时输出到任务控制台；同商品不重复保存。</p>
+    <div class="form-row">
+      <label>任务</label><select id="parsed-task_id"><option value="">全部</option></select>
+      <label>每页</label><select id="parsed-page_size"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
+      <button type="button" onclick="parsedPage=1;loadParsed()">查询</button>
+      <button type="button" class="danger small" id="parsed-batch-del-btn" onclick="deleteParsedBatch()" style="display:none">批量删除</button>
+    </div>
+    <table style="margin-top:0.5rem">
+      <thead><tr><th><input type="checkbox" id="parsed-check-all" onclick="toggleParsedCheckAll(this)"/></th><th>ID</th><th>任务</th><th>商品描述</th><th>价格</th><th>时间</th><th>操作</th></tr></thead>
+      <tbody id="parsed-tbody"></tbody>
+    </table>
+    <div id="parsed-pagination" style="margin-top:0.5rem;font-size:0.875rem;color:var(--muted)"></div>
+    </div>
+  </div>
+
+  <!-- 用户信息：个人资料 -->
+  <div id="panel-profile" class="panel card">
+    <div class="profile-header" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+      <div class="user-icon" style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0">👤</div>
+      <div>
+        <h2 style="margin:0;font-size:1rem;color:var(--text)">个人资料</h2>
+        <span id="profile-display-name" class="muted" style="font-size:0.875rem">-</span>
+      </div>
+    </div>
+    <div id="profile-form" class="form-row" style="flex-direction:column;align-items:flex-start;gap:0.5rem">
+      <div class="form-row"><label>用户名</label><span id="profile-username" class="muted">-</span></div>
+      <div class="form-row"><label>手机</label><input type="text" id="profile-phone" placeholder="可选"/></div>
+      <div class="form-row"><label>邮箱</label><input type="text" id="profile-email" placeholder="可选"/></div>
+      <button type="button" onclick="saveProfile()">保存</button>
+    </div>
+  </div>
+
+  <!-- 管理员：用户管理 -->
+  <div id="panel-users" class="panel card">
+    <h2>用户管理</h2>
+    <table>
+      <thead><tr><th>ID</th><th>用户名</th><th>手机</th><th>邮箱</th><th>状态</th><th>管理员</th><th>操作</th></tr></thead>
+      <tbody id="users-tbody"></tbody>
+    </table>
+  </div>
+
+  <div id="edit-user-modal" class="modal">
+    <div class="modal-inner" style="max-width:400px">
+      <h2>编辑用户</h2>
+      <input type="hidden" id="edit-user-id">
+      <div class="form-row"><label>用户名</label><span id="edit-user-username" class="muted">-</span></div>
+      <div class="form-row"><label>手机</label><input type="text" id="edit-user-phone" placeholder="可选"/></div>
+      <div class="form-row"><label>邮箱</label><input type="text" id="edit-user-email" placeholder="可选"/></div>
+      <div class="form-row"><label>状态</label><select id="edit-user-active"><option value="1">正常</option><option value="0">封禁</option></select></div>
+      <div id="edit-user-admin-row" class="form-row" style="display:none"><label>管理员</label><select id="edit-user-admin"><option value="0">否</option><option value="1">是</option></select></div>
+      <div class="form-row" style="margin-top:0.75rem">
+        <button type="button" onclick="saveEditUser()">保存</button>
+        <button type="button" class="danger" onclick="document.getElementById('edit-user-modal').classList.remove('show')">取消</button>
+      </div>
+    </div>
+  </div>
+
+    </main>
+  </div>
+
+  <script>
+    // C-S 模式：Electron 通过 ?api= 或 window.__XIANYU_API_BASE__ 注入服务端根地址（无则同域相对路径）
+    (function initXianyuApiBase() {
+      try {
+        var inj = (typeof window.__XIANYU_API_BASE__ === 'string') ? window.__XIANYU_API_BASE__.trim() : '';
+        if (inj) {
+          try { localStorage.setItem('xianyu_api_base', inj.replace(/\/$/, '')); } catch (e0) {}
+        }
+        var u = new URL(window.location.href);
+        var q = u.searchParams.get('api');
+        if (q) {
+          try {
+            localStorage.setItem('xianyu_api_base', decodeURIComponent(q).replace(/\/$/, ''));
+          } catch (e1) {}
+        }
+      } catch (e2) {}
+    })();
+    var API = '';
+    try {
+      API = (localStorage.getItem('xianyu_api_base') || '').replace(/\/$/, '');
+    } catch (e3) {
+      API = '';
+    }
+    const TOKEN_KEY = 'xianyu_admin_token';
+    let currentUser = null;
+    var webSessionBaseCache = null;
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { localStorage.setItem(TOKEN_KEY, t || ''); }
+    function clearToken() {
+      localStorage.removeItem(TOKEN_KEY);
+      currentUser = null;
+      webSessionBaseCache = null;
+    }
+    function authHeaders() {
+      const t = getToken();
+      return t ? { 'Authorization': 'Bearer ' + t } : {};
+    }
+    function mergeHeaders(opts) {
+      const h = authHeaders();
+      opts = opts || {};
+      opts.headers = Object.assign({}, opts.headers || {}, h);
+      return opts;
+    }
+    async function apiFetch(url, opts) {
+      opts = mergeHeaders(opts || {});
+      const res = await fetch(API + url, opts);
+      if (res.status === 401) { clearToken(); showLogin(); return { ok: false, status: 401 }; }
+      return res;
+    }
+
+    function showLogin() {
+      document.getElementById('login-wrap').style.display = 'flex';
+      document.getElementById('app-wrap').style.display = 'none';
+      showLoginPage('code');
+    }
+    function initSidebarFold() {
+      var sidebar = document.querySelector('#app-wrap .sidebar');
+      if (!sidebar) return;
+      var collapsed = localStorage.getItem('sidebarCollapsed') === '1';
+      sidebar.classList.toggle('collapsed', collapsed);
+      var btn = document.getElementById('sidebar-toggle');
+      if (btn && !btn._bound) {
+        btn._bound = true;
+        btn.onclick = function() {
+          sidebar.classList.toggle('collapsed');
+          localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+          btn.title = sidebar.classList.contains('collapsed') ? '展开侧栏' : '折叠侧栏';
+          btn.setAttribute('aria-label', btn.title);
+        };
+      }
+      var t = document.getElementById('sidebar-toggle');
+      if (t) { t.title = collapsed ? '展开侧栏' : '折叠侧栏'; t.setAttribute('aria-label', t.title); }
+    }
+    function showApp() {
+      document.getElementById('login-wrap').style.display = 'none';
+      document.getElementById('app-wrap').style.display = 'flex';
+      initSidebarFold();
+      if (currentUser && currentUser.is_admin) document.querySelector('.nav-admin').style.display = 'block';
+      var nameEl = document.getElementById('sidebar-user-name');
+      nameEl.textContent = (currentUser && (currentUser.username || currentUser.phone || currentUser.email)) ? (currentUser.username || currentUser.phone || currentUser.email) : '-';
+      document.getElementById('sidebar-user').onclick = function() {
+        currentPanel = 'profile';
+        document.querySelectorAll('.nav-link').forEach(function(a) { a.classList.remove('active'); });
+        document.querySelectorAll('.panel').forEach(function(p) { p.classList.toggle('show', p.id === 'panel-profile'); });
+        loadProfile();
+      };
+      document.getElementById('sidebar-logout').onclick = function() { if (confirm('确定要退出登录吗？')) { clearToken(); showLogin(); } };
+    }
+    function showLoginPage(page) {
+      var isCode = (page === 'code');
+      document.getElementById('login-page-code').classList.toggle('show', isCode);
+      document.getElementById('login-page-admin').classList.toggle('show', !isCode);
+      document.getElementById('login-msg').style.display = 'none';
+      document.getElementById('login-msg-admin').style.display = 'none';
+    }
+    function showLoginMsg(text, isErr) {
+      var onAdmin = document.getElementById('login-page-admin').classList.contains('show');
+      var el = onAdmin ? document.getElementById('login-msg-admin') : document.getElementById('login-msg');
+      el.textContent = text;
+      el.className = 'msg ' + (isErr ? 'err' : 'ok');
+      el.style.display = text ? 'block' : 'none';
+    }
+    document.getElementById('link-to-admin-login').addEventListener('click', function(e) { e.preventDefault(); showLoginPage('admin'); });
+    document.getElementById('link-to-code-login').addEventListener('click', function(e) { e.preventDefault(); showLoginPage('code'); });
+    // 手机/邮箱登录切换（底部小字靠左）
+    (function() {
+      var input = document.getElementById('code-phone_or_email');
+      var label = input && input.closest('.form-row') && input.closest('.form-row').querySelector('label');
+      function setPhoneMode() {
+        document.getElementById('mode-phone').classList.add('active');
+        document.getElementById('mode-email').classList.remove('active');
+        if (label) label.textContent = '手机号';
+        if (input) input.placeholder = '请输入手机号';
+      }
+      function setEmailMode() {
+        document.getElementById('mode-phone').classList.remove('active');
+        document.getElementById('mode-email').classList.add('active');
+        if (label) label.textContent = '邮箱';
+        if (input) input.placeholder = '请输入邮箱';
+      }
+      document.getElementById('mode-phone').addEventListener('click', setPhoneMode);
+      document.getElementById('mode-email').addEventListener('click', setEmailMode);
+    })();
+    async function sendCode() {
+      const phone = document.getElementById('code-phone_or_email').value.trim();
+      if (!phone) { showLoginMsg('请输入手机或邮箱', true); return; }
+      const res = await fetch(API + '/auth/send-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone_or_email: phone }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showLoginMsg(data.detail || '发送失败', true); return; }
+      document.getElementById('code-sent-msg').textContent = '验证码已发送' + (data.code ? '（开发环境：' + data.code + '）' : '');
+    }
+    async function loginByCode() {
+      const phone = document.getElementById('code-phone_or_email').value.trim();
+      const code = document.getElementById('code-code').value.trim();
+      if (!phone || !code) { showLoginMsg('请输入手机/邮箱和验证码', true); return; }
+      const res = await fetch(API + '/auth/login/code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone_or_email: phone, code: code }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showLoginMsg(data.detail || '登录失败', true); return; }
+      setToken(data.access_token);
+      currentUser = data.user;
+      showLoginMsg('', false);
+      showApp();
+      loadPhones();
+      showProfileCompleteModalIfNeeded();
+    }
+    async function loginByPwd() {
+      const username = document.getElementById('admin-username').value.trim();
+      const password = document.getElementById('admin-password').value;
+      if (!username || !password) { showLoginMsg('请输入用户名和密码', true); return; }
+      const res = await fetch(API + '/auth/login/pwd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: username, password: password }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showLoginMsg(data.detail || '登录失败', true); return; }
+      setToken(data.access_token);
+      currentUser = data.user;
+      showApp();
+      loadPhones();
+      showProfileCompleteModalIfNeeded();
+    }
+
+    async function loadProfile() {
+      const res = await apiFetch('/auth/me');
+      if (!res.ok) return;
+      const u = await res.json();
+      var displayName = u.username || u.phone || u.email || '-';
+      document.getElementById('profile-username').textContent = displayName;
+      document.getElementById('profile-display-name').textContent = displayName;
+      document.getElementById('profile-phone').value = u.phone || '';
+      document.getElementById('profile-email').value = u.email || '';
+      var sideName = document.getElementById('sidebar-user-name');
+      if (sideName) sideName.textContent = displayName;
+    }
+    async function saveProfile() {
+      const phone = document.getElementById('profile-phone').value.trim() || null;
+      const email = document.getElementById('profile-email').value.trim() || null;
+      const res = await apiFetch('/auth/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || undefined, email: email || undefined }) });
+      var data = await res.json();
+      if (!res.ok) { showMsg(data.detail || '保存失败', true); return; }
+      currentUser = data;
+      var dn = currentUser.username || currentUser.phone || currentUser.email || '-';
+      document.getElementById('sidebar-user-name').textContent = dn;
+      document.getElementById('profile-display-name').textContent = dn;
+      showMsg('已保存');
+    }
+    // 首次登录或手机/邮箱都为空时弹出信息完善框
+    function showProfileCompleteModalIfNeeded() {
+      if (!currentUser) return;
+      var hasPhone = (currentUser.phone && currentUser.phone.trim());
+      var hasEmail = (currentUser.email && currentUser.email.trim());
+      if (hasPhone || hasEmail) return;
+      document.getElementById('profile-complete-phone').value = currentUser.phone || '';
+      document.getElementById('profile-complete-email').value = currentUser.email || '';
+      document.getElementById('profile-complete-msg').style.display = 'none';
+      document.getElementById('profile-complete-modal').classList.add('show');
+    }
+    function closeProfileCompleteModal() {
+      document.getElementById('profile-complete-modal').classList.remove('show');
+    }
+    async function submitProfileComplete() {
+      var phone = document.getElementById('profile-complete-phone').value.trim() || null;
+      var email = document.getElementById('profile-complete-email').value.trim() || null;
+      var msgEl = document.getElementById('profile-complete-msg');
+      if (!phone && !email) { msgEl.textContent = '请至少填写手机或邮箱'; msgEl.className = 'msg err'; msgEl.style.display = 'block'; return; }
+      var res = await apiFetch('/auth/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || undefined, email: email || undefined }) });
+      var data = await res.json();
+      if (!res.ok) { msgEl.textContent = (data.detail || '保存失败'); msgEl.className = 'msg err'; msgEl.style.display = 'block'; return; }
+      currentUser = data;
+      var dn = currentUser.username || currentUser.phone || currentUser.email || '-';
+      document.getElementById('sidebar-user-name').textContent = dn;
+      closeProfileCompleteModal();
+    }
+    var adminUserListCache = [];
+    async function loadAdminUsers() {
+      const res = await apiFetch('/admin/users');
+      if (!res.ok) return;
+      const list = await res.json();
+      adminUserListCache = list;
+      document.getElementById('users-tbody').innerHTML = list.map(function(u) {
+        var ops = '<button type="button" class="small" onclick="openEditUserModal(' + u.id + ')">编辑</button>';
+        if (!(u.is_admin && u.id === currentUser.id)) ops += ' <button type="button" class="small ' + (u.is_active ? 'danger' : '') + '" onclick="toggleUserActive(' + u.id + ',' + !u.is_active + ')">' + (u.is_active ? '封禁' : '启用') + '</button>';
+        return '<tr><td>' + u.id + '</td><td>' + escapeHtml(u.username || '-') + '</td><td>' + escapeHtml(u.phone || '-') + '</td><td>' + escapeHtml(u.email || '-') + '</td><td>' + (u.is_active ? '正常' : '封禁') + '</td><td>' + (u.is_admin ? '是' : '-') + '</td><td>' + ops + '</td></tr>';
+      }).join('') || '<tr><td colspan="7">暂无用户</td></tr>';
+    }
+    function openEditUserModal(userId) {
+      var u = adminUserListCache.find(function(x) { return x.id === userId; });
+      if (!u) return;
+      document.getElementById('edit-user-id').value = u.id;
+      document.getElementById('edit-user-username').textContent = u.username || '-';
+      document.getElementById('edit-user-phone').value = u.phone || '';
+      document.getElementById('edit-user-email').value = u.email || '';
+      document.getElementById('edit-user-active').value = u.is_active ? '1' : '0';
+      var adminRow = document.getElementById('edit-user-admin-row');
+      var adminSel = document.getElementById('edit-user-admin');
+      if (currentUser && currentUser.username === 'admin') {
+        adminRow.style.display = '';
+        adminSel.value = u.is_admin ? '1' : '0';
+      } else {
+        adminRow.style.display = 'none';
+      }
+      document.getElementById('edit-user-modal').classList.add('show');
+    }
+    async function saveEditUser() {
+      var userId = parseInt(document.getElementById('edit-user-id').value, 10);
+      var phone = document.getElementById('edit-user-phone').value.trim() || null;
+      var email = document.getElementById('edit-user-email').value.trim() || null;
+      var is_active = document.getElementById('edit-user-active').value === '1';
+      var payload = { phone: phone, email: email, is_active: is_active };
+      if (currentUser && currentUser.username === 'admin') {
+        payload.is_admin = document.getElementById('edit-user-admin').value === '1';
+      }
+      var res = await apiFetch('/admin/users/' + userId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) { showMsg((await res.json()).detail || '保存失败', true); return; }
+      document.getElementById('edit-user-modal').classList.remove('show');
+      showMsg('已保存');
+      loadAdminUsers();
+    }
+    async function toggleUserActive(userId, is_active) {
+      const res = await apiFetch('/admin/users/' + userId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: is_active }) });
+      if (!res.ok) { showMsg((await res.json()).detail || '操作失败', true); return; }
+      showMsg(is_active ? '已启用' : '已封禁');
+      loadAdminUsers();
+    }
+
+    function showMsg(text, isErr) {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (isErr ? 'err' : 'ok');
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+    let currentPanel = 'phones';
+    function nav() {
+      currentPanel = this.dataset.panel;
+      document.querySelectorAll('.nav-link').forEach(a => {
+        a.classList.toggle('active', a.dataset.panel === currentPanel);
+      });
+      document.querySelectorAll('.panel').forEach(p => {
+        p.classList.toggle('show', p.id === 'panel-' + currentPanel);
+      });
+      if (currentPanel === 'phones') loadPhones();
+      if (currentPanel === 'tasks') { refreshTasksPanel(); }
+      if (currentPanel === 'stats') { loadTasks(); loadSummary(); loadRecords(); loadParsed(); }
+      if (currentPanel === 'profile') loadProfile();
+      if (currentPanel === 'users') loadAdminUsers();
+    }
+    document.querySelectorAll('.nav-link[data-panel]').forEach(a => a.addEventListener('click', function(e) { e.preventDefault(); if (this.id !== 'nav-logout') nav.call(this); }));
+
+    // 有运行中任务时为 true，用于控制是否请求控制台与通知（无运行中任务不请求）
+    var hasRunningTasks = false;
+    function refreshTasksPanel() {
+      loadPhones();
+      loadWebSessionStatus();
+      loadTasks().then(function() {
+        if (hasRunningTasks) loadConsole();
+        pollMatchNotifications(); // 刷新时顺带拉一次匹配通知
+      });
+    }
+
+    function formatApiDetail(detail) {
+      if (detail == null) return '';
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        return detail.map(function (x) { return (x && x.msg) ? x.msg : String(x); }).join('; ');
+      }
+      return String(detail);
+    }
+
+    async function resolveWebSessionBase() {
+      if (webSessionBaseCache) return webSessionBaseCache;
+      var a = await apiFetch('/web-session/status');
+      if (a.status !== 404) { webSessionBaseCache = '/web-session'; return webSessionBaseCache; }
+      var b = await apiFetch('/api/web-session/status');
+      if (b.status !== 404) { webSessionBaseCache = '/api/web-session'; return webSessionBaseCache; }
+      webSessionBaseCache = '/web-session';
+      return webSessionBaseCache;
+    }
+
+    async function loadWebSessionStatus() {
+      var el = document.getElementById('web-session-status');
+      if (!el) return;
+      if (!getToken()) { el.textContent = '登录态：请先登录后台'; return; }
+      try {
+        const base = await resolveWebSessionBase();
+        const res = await apiFetch(base + '/status');
+        if (!res.ok) { el.textContent = '登录态：无法加载'; return; }
+        const s = await res.json();
+        if (s.active) {
+          var names = (s.sample_cookie_names && s.sample_cookie_names.length) ? ('；示例：' + s.sample_cookie_names.slice(0, 6).join(', ') + (s.sample_cookie_names.length > 6 ? '…' : '')) : '';
+          el.textContent = '登录态：已应用任务页 Cookie（' + s.cookie_count + ' 条，域 ' + (s.domain || '-') + '，版本 v' + s.version + '）' + names;
+        } else {
+          el.textContent = '登录态：未使用任务页 cURL（版本 v' + s.version + '，将使用 .env 或无 Cookie）';
+        }
+      } catch (e) {
+        el.textContent = '登录态：加载失败';
+      }
+    }
+
+    async function applyWebCurl() {
+      var ta = document.getElementById('web-curl-input');
+      var msg = document.getElementById('web-session-msg');
+      if (!ta || !msg) return;
+      var text = ta.value || '';
+      if (!text.trim()) {
+        msg.style.display = 'block'; msg.className = 'msg err'; msg.textContent = '请粘贴完整 cURL';
+        return;
+      }
+      const base = await resolveWebSessionBase();
+      const res = await apiFetch(base + '/from-curl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ curl_text: text })
+      });
+      msg.style.display = 'block';
+      if (res.status === 401) return;
+      if (!res.ok) {
+        var det = '请求失败';
+        try { var j = await res.json(); det = formatApiDetail(j.detail) || det; } catch (e2) {}
+        msg.className = 'msg err'; msg.textContent = det;
+        return;
+      }
+      const data = await res.json();
+      msg.className = 'msg ok';
+      msg.textContent = '已应用 ' + data.cookie_count + ' 条 Cookie（域 ' + (data.domain || '') + '）。运行中的网页任务将自动切换会话。';
+      loadWebSessionStatus();
+    }
+
+    async function clearWebSession() {
+      if (!confirm('确定清除任务页保存的网页 Cookie？运行中的网页任务下轮将改用 .env 或无 Cookie。')) return;
+      const base = await resolveWebSessionBase();
+      const res = await apiFetch(base + '/clear', { method: 'POST' });
+      var msg = document.getElementById('web-session-msg');
+      if (res.ok) {
+        if (msg) { msg.style.display = 'block'; msg.className = 'msg ok'; msg.textContent = '已清除内存登录态'; }
+      } else {
+        if (msg) { msg.style.display = 'block'; msg.className = 'msg err'; msg.textContent = '清除失败'; }
+      }
+      loadWebSessionStatus();
+    }
+    // /phones、/tasks 仅在手点刷新或切换面板时拉取；运行控制台在「抢购任务」面板且有运行中任务时每 4 秒拉取一次以实时更新
+    var consolePollInterval = 4000;
+    setInterval(function() {
+      if (!getToken() || document.getElementById('app-wrap').style.display === 'none') return;
+      if (document.hidden) return;
+      if (currentPanel !== 'tasks' || !hasRunningTasks) return;
+      loadConsole();
+      // 与控制台同步轮询匹配通知，避免仅首次「刷新」后才弹窗
+      pollMatchNotifications();
+    }, consolePollInterval);
+
+    // 匹配通知：仅点击刷新或切换任务面板时拉一次，无定时轮询
+    let lastSeenNotificationId = 0;
+    let matchAlertQueue = [];
+    async function pollMatchNotifications() {
+      if (!getToken()) return;
+      if (document.getElementById('app-wrap').style.display === 'none') return;
+      if (document.hidden) return;
+      if (!hasRunningTasks) return;
+      try {
+        const res = await apiFetch('/notifications/recent?limit=20&after_id=' + lastSeenNotificationId);
+        if (!res.ok) return;
+        const list = await res.json();
+        if (!Array.isArray(list) || !list.length) return;
+        if (lastSeenNotificationId === 0) {
+          var maxId = Math.max.apply(null, list.map(function(n) { return n.id; }));
+          lastSeenNotificationId = maxId;
+          // 首次轮询：仅将“最近 15 秒内”产生的通知入队弹框，避免漏掉刚发生的匹配
+          var nowSec = Date.now() / 1000;
+          list.forEach(function(n) {
+            if ((nowSec - (n.created_at || 0)) <= 15) matchAlertQueue.push(n);
+          });
+        } else {
+          list.forEach(function(n) {
+            if (n.id > lastSeenNotificationId) { matchAlertQueue.push(n); lastSeenNotificationId = n.id; }
+          });
+        }
+        showNextMatchAlert();
+      } catch (e) {}
+    }
+    var matchAlertAudioContext = null;
+    function unlockMatchAlertSound() {
+      if (matchAlertAudioContext) return;
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return;
+      try {
+        matchAlertAudioContext = new C();
+        if (matchAlertAudioContext.state === 'suspended') matchAlertAudioContext.resume();
+      } catch (e) {}
+    }
+    function playMatchAlertSound() {
+      try {
+        var C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return;
+        if (!matchAlertAudioContext) matchAlertAudioContext = new C();
+        var ctx = matchAlertAudioContext;
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(function() { doBeep(ctx); }).catch(function() { doBeep(ctx); });
+          return;
+        }
+        doBeep(ctx);
+      } catch (e) {}
+    }
+    function doBeep(ctx) {
+      try {
+        function beep(startAt, duration) {
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 880;
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0.35, startAt);
+          gain.gain.exponentialRampToValueAtTime(0.01, startAt + duration);
+          osc.start(startAt);
+          osc.stop(startAt + duration);
+        }
+        beep(ctx.currentTime, 0.1);
+        beep(ctx.currentTime + 0.15, 0.1);
+      } catch (e) {}
+    }
+    (function bindUnlockSoundOnce() {
+      function unlock() { unlockMatchAlertSound(); document.removeEventListener('click', unlock); document.removeEventListener('touchstart', unlock); }
+      document.addEventListener('click', unlock, { once: true, passive: true });
+      document.addEventListener('touchstart', unlock, { once: true, passive: true });
+    })();
+    function showNextMatchAlert() {
+      if (matchAlertQueue.length === 0) return;
+      if (document.getElementById('match-alert-modal').classList.contains('show')) return;
+      const n = matchAlertQueue.shift();
+      const keywords = n.matched_keywords || [];
+      const conditionsEl = document.getElementById('match-alert-conditions');
+      if (conditionsEl) conditionsEl.textContent = keywords.length ? ('匹配的规则条件：' + keywords.join('、')) : '';
+      const body = document.getElementById('match-alert-body');
+      // 描述中高亮匹配关键字
+      let descHtml = escapeHtml(n.description || '-');
+      keywords.forEach(function(kw) {
+        if (!kw) return;
+        const escapedKw = escapeHtml(kw);
+        const re = new RegExp(escapedKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        descHtml = descHtml.replace(re, '<span class="match-highlight">$&</span>');
+      });
+      const priceStr = n.price != null ? String(n.price) : '-';
+      body.innerHTML = '<div class="match-row">任务 ID：' + n.task_id + '</div>' +
+        '<div class="match-row"><span class="match-label">描述：</span>' + descHtml + '</div>' +
+        '<div class="match-row"><span class="match-label">价格：</span><span class="match-highlight">' + escapeHtml(priceStr) + '</span></div>';
+      document.getElementById('match-alert-modal').classList.add('show');
+      playMatchAlertSound();
+    }
+    function closeMatchAlertAndShowNext() {
+      document.getElementById('match-alert-modal').classList.remove('show');
+      showNextMatchAlert();
+    }
+    // 不轮询：/phones、/tasks、/tasks/running、/tasks/console、匹配通知均不定时请求，用户点击「刷新」时拉取
+
+    function updateConsoleScreenshot(taskId) {
+      var wrap = document.getElementById('console-screenshot-wrap');
+      var img = document.getElementById('console-screenshot');
+      if (!wrap || !img) return;
+      if (!taskId) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = 'none';
+      img.onload = function() { wrap.style.display = 'block'; };
+      img.onerror = function() { wrap.style.display = 'none'; };
+      img.src = '/static/task_screenshots/' + taskId + '_latest.png?t=' + Date.now();
+    }
+    async function loadConsole() {
+      const runningRes = await apiFetch('/tasks/running');
+      const running = runningRes.ok ? await runningRes.json() : [];
+      const sel = document.getElementById('console-task-id');
+      const currentVal = sel.value;
+      sel.innerHTML = '<option value="">全部</option>' + running.map(function(id) { return '<option value="' + id + '">任务 ' + id + '</option>'; }).join('');
+      if (currentVal && running.indexOf(parseInt(currentVal, 10)) >= 0) sel.value = currentVal;
+      else if (!currentVal) sel.value = '';
+      const taskId = sel.value ? parseInt(sel.value, 10) : '';
+      const url = taskId ? '/tasks/console?task_id=' + taskId + '&limit=300' : '/tasks/console?limit=300';
+      const res = await apiFetch(url);
+      const data = res.ok ? await res.json() : { lines: [] };
+      const pre = document.getElementById('console-output');
+      if (!data.lines || !data.lines.length) {
+        pre.textContent = running.length ? '暂无日志（任务运行后会出现）' : '当前无运行中的任务';
+        updateConsoleScreenshot(taskId);
+        return;
+      }
+      // 只展示“增加的商品”类日志：按「加载时间 价格 描述」顺序展示，描述起始对齐；兼容 价格= 与 商价格=
+      // 与后端 _log「解析商品[n] 描述=… 价格=…」对齐；用 lastIndexOf 避免描述文案里含「 价格=」时误截断
+      function formatProductLine(msg) {
+        var m = (msg || '');
+        var descStart = m.indexOf('描述=');
+        if (descStart < 0) return null;
+        var idxPrice = m.lastIndexOf(' 价格=');
+        var idxShang = m.lastIndexOf(' 商价格=');
+        var idx = Math.max(idxPrice, idxShang);
+        if (idx < 0 || idx < descStart) return null;
+        var label = (idxShang > idxPrice) ? ' 商价格=' : ' 价格=';
+        var price = m.substring(idx + label.length).trim();
+        var desc = m.substring(descStart + 3, idx).trim();
+        return { price: price, desc: desc };
+      }
+      // 按日志顺序合并：商品行 +「连续3次加载商品失败」错误行（红色背景）；回复正常后该条不再出现则无红条
+      var rawProducts = [];
+      ;(data.lines || []).forEach(function(l) {
+        var p = formatProductLine(l.msg);
+        if (p) rawProducts.push({ time: (l.time_full || l.time || ''), price: p.price, desc: p.desc, ts: l.ts });
+      });
+      var noProductAlertEl = document.getElementById('console-no-product-alert');
+      if (noProductAlertEl) {
+        var last = rawProducts.length ? rawProducts[rawProducts.length - 1] : null;
+        var lastTs = last && (last.ts != null && last.ts > 0 ? last.ts : null);
+        if (last && lastTs == null && (last.time || '').trim()) {
+          var timeStr = (last.time || '').trim();
+          var timeOnly = timeStr.indexOf(' ') >= 0 ? timeStr.substring(timeStr.lastIndexOf(' ') + 1) : timeStr;
+          var parts = timeOnly.split(':');
+          if (parts.length >= 2) {
+            var d = new Date();
+            d.setHours(parseInt(parts[0], 10) || 0, parseInt(parts[1], 10) || 0, parseInt(parts[2], 10) || 0, 0);
+            lastTs = d.getTime() / 1000;
+            if (lastTs > Date.now() / 1000) lastTs -= 86400;
+          }
+        }
+        var stale = lastTs && (Date.now() / 1000 - lastTs) > 60;
+        noProductAlertEl.style.display = stale ? 'block' : 'none';
+        if (stale) noProductAlertEl.textContent = '已超过 1 分钟未收到商品日志，请检查任务或设备';
+      }
+      var hasErrorLine = (data.lines || []).some(function(l) { return (l.msg || '').indexOf('连续3次加载商品失败') >= 0; });
+      if (!rawProducts.length && !hasErrorLine) {
+        if (noProductAlertEl) noProductAlertEl.style.display = 'none';
+        pre.textContent = '暂无商品记录（解析到新发页商品后会在此展示）';
+      } else {
+        function padRight(s, n) { var r = s; while (r.length < n) r += ' '; return r; }
+        var priceWidth = 10;
+        rawProducts.forEach(function(p) { if (p.price.length > priceWidth) priceWidth = p.price.length; });
+        priceWidth = Math.max(priceWidth, 14);
+        var lastBatchSize = Math.min(3, rawProducts.length);
+        var lastStartIdx = rawProducts.length - lastBatchSize;
+        var out = [];
+        var productIdx = 0;
+        var lines = data.lines || [];
+        for (var i = 0; i < lines.length; i++) {
+          var l = lines[i];
+          var p = formatProductLine(l.msg);
+          if (p) {
+            var t = (l.time_full || l.time || '').trim();
+            var timePart = t ? t + '  ' : '';
+            var lineStr = timePart + padRight(p.price + '  ', priceWidth + 2) + p.desc;
+            var esc = escapeHtml(lineStr);
+            if (productIdx >= lastStartIdx) out.push('<span class="console-latest">' + esc + '</span>');
+            else out.push(esc);
+            productIdx++;
+          } else if ((l.msg || '').indexOf('连续3次加载商品失败') >= 0) {
+            var t = (l.time_full || l.time || '').trim();
+            var timePart = t ? t + '  ' : '';
+            out.push('<span style="display:block;background:#8b2635;color:#fff;padding:0.15rem 0.35rem;margin:0.1rem -0.35rem 0;border-radius:3px;">' + escapeHtml(timePart + (l.msg || '')) + '</span>');
+          }
+        }
+        pre.innerHTML = out.join('\n');
+      }
+      pre.scrollTop = pre.scrollHeight;
+      updateConsoleScreenshot(taskId);
+    }
+
+    window.allPhones = [];
+    function filterNewTaskPhones() {
+      var ch = (document.getElementById('new-task-channel') || {}).value || 'app';
+      var list = window.allPhones || [];
+      var filtered = ch === 'web'
+        ? list.filter(function(p) { return (p.device_id || '').indexOf('web:') === 0; })
+        : list.filter(function(p) { return (p.device_id || '').indexOf('web:') !== 0; });
+      var sel = document.getElementById('new-task-phone_id');
+      if (!sel) return;
+      sel.innerHTML = filtered.length
+        ? filtered.map(function(p) { return '<option value="' + p.id + '">' + escapeHtml(p.nickname || p.device_id) + ' (' + p.id + ')</option>'; }).join('')
+        : '<option value="">' + (ch === 'web' ? '请先点「创建/获取网页环境」' : '请先接入 USB 手机') + '</option>';
+    }
+    async function ensureWebPhone() {
+      var res = await apiFetch('/phones/web', { method: 'POST' });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) { showMsg(data.detail || '创建失败', true); return; }
+      showMsg('已就绪：闲鱼网页运行环境（ID ' + data.id + '）');
+      loadPhones();
+    }
+    async function loadPhones() {
+      const res = await apiFetch('/phones');
+      const list = res.ok ? await res.json() : [];
+      window.allPhones = list;
+      document.getElementById('phones-tbody').innerHTML = list.map(p =>
+        `<tr>
+          <td>${p.id}</td>
+          <td><code>${escapeHtml(p.device_id)}</code></td>
+          <td>${escapeHtml(p.nickname || '-')}</td>
+          <td><span class="badge ${p.is_active ? 'phone-on' : 'phone-off'}">${p.is_active ? '启用' : '停用'}</span></td>
+          <td>
+            <button type="button" class="small ${p.is_active ? 'btn-phone-disable' : 'btn-phone-enable'}" onclick="togglePhone(${p.id},${!p.is_active})">${p.is_active ? '停用' : '启用'}</button>
+            <button type="button" class="small danger" onclick="delPhone(${p.id})">删除</button>
+          </td>
+        </tr>`
+      ).join('') || '<tr><td colspan="5">暂无设备</td></tr>';
+      filterNewTaskPhones();
+    }
+
+    async function loadAdbDevices() {
+      const res = await apiFetch('/phones/adb');
+      const data = await res.json().catch(() => ({}));
+      const list = res.ok ? data : [];
+      const el = document.getElementById('adb-list');
+      if (!res.ok) {
+        el.innerHTML = (data.detail || '请求失败') + '';
+        showMsg(data.detail || '请求失败', true);
+        return;
+      }
+      if (!list.length) { el.innerHTML = '未检测到 USB 设备，请连接手机并开启 USB 调试'; return; }
+      el.innerHTML = '当前设备：<br>' + list.map(d =>
+        `<button type="button" class="small" onclick="document.getElementById('new-phone-device_id').value='${escapeHtml(d.serial)}'">${escapeHtml(d.serial)}</button> `
+      ).join('');
+    }
+
+    async function addPhone() {
+      const device_id = document.getElementById('new-phone-device_id').value.trim();
+      const nickname = document.getElementById('new-phone-nickname').value.trim();
+      if (!device_id) { showMsg('请填写设备 ID', true); return; }
+      const res = await apiFetch('/phones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device_id, nickname }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showMsg(data.detail || '接入失败', true); return; }
+      showMsg('已接入');
+      document.getElementById('new-phone-device_id').value = '';
+      document.getElementById('new-phone-nickname').value = '';
+      loadPhones();
+    }
+
+    async function togglePhone(id, is_active) {
+      const res = await apiFetch('/phones/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active }) });
+      if (!res.ok) { showMsg((await res.json()).detail || '操作失败', true); return; }
+      loadPhones();
+    }
+
+    async function delPhone(id) {
+      if (!confirm('确定移除该设备？其任务也会被删除。')) return;
+      const res = await apiFetch('/phones/' + id, { method: 'DELETE' });
+      if (!res.ok) { showMsg((await res.json()).detail || '删除失败', true); return; }
+      showMsg('已删除');
+      loadPhones();
+      loadTasks();
+    }
+
+    let phoneList = [];
+    let taskList = [];
+    async function loadTasks() {
+      const [pRes, tRes] = await Promise.all([apiFetch('/phones'), apiFetch('/tasks')]);
+      phoneList = pRes.ok ? await pRes.json() : [];
+      window.allPhones = phoneList;
+      taskList = tRes.ok ? await tRes.json() : [];
+      var tca = document.getElementById('tasks-check-all');
+      if (tca) tca.checked = false;
+      updateTasksBatchBar();
+      document.getElementById('tasks-tbody').innerHTML = taskList.map(t => {
+        const phone = phoneList.find(p => p.id === t.phone_id);
+        const rules = t.rules || [];
+        const ruleSummary = rules.length ? rules.length + '条规则' : ([t.min_price, t.max_price].filter(Boolean).length || (t.description_keyword || '').trim() ? '1条(旧)' : '-');
+        const name = (t.name || '').trim() || '-';
+        const refreshSec = t.refresh_interval_sec != null ? t.refresh_interval_sec : 3;
+        const modeLabel = (t.run_mode === 'new_drop_only') ? '仅新发/降价' : '从App定位';
+        const channelLabel = (t.channel === 'web') ? '网页' : 'App';
+        return `<tr>
+          <td><input type="checkbox" class="task-cb" value="${t.id}" onclick="updateTasksBatchBar()" aria-label="选中任务${t.id}"/></td>
+          <td>${t.id}</td>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(channelLabel)}</td>
+          <td>${phone ? (phone.nickname || phone.device_id) : t.phone_id}</td>
+          <td>${escapeHtml(t.keyword)}</td>
+          <td>${refreshSec}秒</td>
+          <td>${escapeHtml(modeLabel)}</td>
+          <td>${escapeHtml(ruleSummary)}</td>
+          <td><span class="badge ${t.is_running ? 'run' : 'stop'}">${t.is_running ? '运行中' : '已停止'}</span></td>
+          <td>
+            <button type="button" class="small" onclick="openEditTask(${t.id})">编辑</button>
+            <button type="button" class="small" onclick="dupTask(${t.id})">复制</button>
+            <button type="button" class="small" onclick="toggleTask(${t.id},${!t.is_running})">${t.is_running ? '停止' : '启动'}</button>
+            <button type="button" class="small danger" onclick="delTask(${t.id})">删除</button>
+          </td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="11">暂无任务</td></tr>';
+      const taskOpts = '<option value="">全部</option>' + taskList.map(t => {
+        const label = (t.name && t.name.trim()) ? `任务 ${t.id} ${escapeHtml(t.name.trim())}` : `任务 ${t.id} ${escapeHtml(t.keyword)}`;
+        return `<option value="${t.id}">${label}</option>`;
+      }).join('');
+      document.getElementById('stats-task_id').innerHTML = taskOpts;
+      document.getElementById('parsed-task_id').innerHTML = taskOpts;
+      hasRunningTasks = taskList.some(function(t) { return t.is_running; });
+      if (!document.getElementById('new-rules-tbody').querySelector('tr')) addNewRuleRow();
+    }
+
+    function moveRuleRow(btn, delta) {
+      var tr = btn.closest('tr');
+      var tbody = tr.parentNode;
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+      var idx = rows.indexOf(tr);
+      if (idx < 0) return;
+      var newIdx = idx + delta;
+      if (newIdx < 0 || newIdx >= rows.length) return;
+      if (delta < 0) tbody.insertBefore(tr, rows[newIdx]);
+      else tbody.insertBefore(tr, rows[newIdx].nextSibling);
+    }
+    function ruleRowHtml(desc, minP, maxP, canDel) {
+      const d = (desc || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      const minV = minP != null ? minP : '';
+      const maxV = maxP != null ? maxP : '';
+      const delBtn = canDel ? '<button type="button" class="small danger" onclick="this.closest(\'tr\').remove()">删</button>' : '';
+      const orderBtns = '<button type="button" class="small" onclick="moveRuleRow(this,-1)" title="上移">↑</button> <button type="button" class="small" onclick="moveRuleRow(this,1)" title="下移">↓</button>';
+      return '<tr><td style="white-space:nowrap">' + orderBtns + '</td><td><input type="text" class="rule-desc" placeholder="逗号分隔，须全包含" value="' + d + '" style="width:100%;min-width:120px"></td><td><input type="number" class="rule-min" placeholder="可选" step="0.01" value="' + minV + '" style="width:5rem"></td><td><input type="number" class="rule-max" placeholder="可选" step="0.01" value="' + maxV + '" style="width:5rem"></td><td>' + delBtn + '</td></tr>';
+    }
+    function filterEditTaskPhones() {
+      var ch = (document.getElementById('edit-task-channel') || {}).value || 'app';
+      var list = (typeof phoneList !== 'undefined' && phoneList && phoneList.length) ? phoneList : (window.allPhones || []);
+      var filtered = ch === 'web'
+        ? list.filter(function(p) { return (p.device_id || '').indexOf('web:') === 0; })
+        : list.filter(function(p) { return (p.device_id || '').indexOf('web:') !== 0; });
+      var sel = document.getElementById('edit-task-phone_id');
+      if (!sel) return;
+      var cur = sel.getAttribute('data-preserve-id');
+      sel.innerHTML = filtered.length
+        ? filtered.map(function(p) { return '<option value="' + p.id + '">' + escapeHtml(p.nickname || p.device_id) + ' (' + p.id + ')</option>'; }).join('')
+        : '<option value="">' + (ch === 'web' ? '请先创建网页环境' : '请先接入 USB 手机') + '</option>';
+      if (cur) {
+        sel.value = cur;
+        if (sel.value !== cur && filtered.length) sel.selectedIndex = 0;
+      }
+      sel.removeAttribute('data-preserve-id');
+    }
+    function toggleTasksCheckAll(ck) {
+      document.querySelectorAll('.task-cb').forEach(function(el) { el.checked = ck.checked; });
+      updateTasksBatchBar();
+    }
+    function updateTasksBatchBar() {
+      var n = document.querySelectorAll('.task-cb:checked').length;
+      var bar = document.getElementById('tasks-batch-bar');
+      if (bar) bar.style.display = n ? 'inline-flex' : 'none';
+    }
+    function selectedTaskIds() {
+      return Array.prototype.map.call(document.querySelectorAll('.task-cb:checked'), function(el) { return parseInt(el.value, 10); }).filter(function(id) { return !isNaN(id); });
+    }
+    async function tasksBatchStop() {
+      var ids = selectedTaskIds();
+      if (!ids.length) return;
+      if (!confirm('确定停止选中的 ' + ids.length + ' 个任务？')) return;
+      var res = await apiFetch('/tasks/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task_ids: ids, action: 'stop' }) });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) { showMsg(data.detail || '操作失败', true); return; }
+      showMsg('已停止 ' + (data.ok || 0) + ' 个' + (data.errors && data.errors.length ? '，部分失败见控制台' : ''));
+      document.getElementById('tasks-check-all').checked = false;
+      refreshTasksPanel();
+    }
+    async function tasksBatchDelete() {
+      var ids = selectedTaskIds();
+      if (!ids.length) return;
+      if (!confirm('确定删除选中的 ' + ids.length + ' 个任务？不可恢复。')) return;
+      var res = await apiFetch('/tasks/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task_ids: ids, action: 'delete' }) });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) { showMsg(data.detail || '删除失败', true); return; }
+      showMsg('已删除 ' + (data.ok || 0) + ' 个');
+      document.getElementById('tasks-check-all').checked = false;
+      refreshTasksPanel();
+    }
+    function openEditTask(id) {
+      const t = taskList.find(function(x) { return x.id === id; });
+      if (!t) return;
+      document.getElementById('edit-task-id').value = t.id;
+      var ec = document.getElementById('edit-task-channel');
+      if (ec) ec.value = (t.channel === 'web') ? 'web' : 'app';
+      var eps = document.getElementById('edit-task-phone_id');
+      if (eps) {
+        eps.setAttribute('data-preserve-id', String(t.phone_id));
+        filterEditTaskPhones();
+        eps.value = String(t.phone_id);
+        if (eps.value !== String(t.phone_id) && eps.options.length) eps.selectedIndex = 0;
+      }
+      document.getElementById('edit-name').value = t.name || '';
+      document.getElementById('edit-keyword').value = t.keyword || '';
+      document.getElementById('edit-refresh-interval').value = (t.refresh_interval_sec != null ? t.refresh_interval_sec : 3);
+      document.getElementById('edit-run_mode').value = (t.run_mode === 'new_drop_only') ? 'new_drop_only' : 'from_app';
+      const tbody = document.getElementById('edit-rules-tbody');
+      tbody.innerHTML = '';
+      const rules = t.rules || [];
+      if (rules.length) {
+        rules.forEach(function(r) {
+          tbody.insertAdjacentHTML('beforeend', ruleRowHtml(r.description_keyword, r.min_price, r.max_price, true));
+        });
+      } else {
+        tbody.insertAdjacentHTML('beforeend', ruleRowHtml(t.description_keyword, t.min_price, t.max_price, false));
+      }
+      document.getElementById('edit-task-modal').classList.add('show');
+    }
+    function addEditRuleRow() {
+      document.getElementById('edit-rules-tbody').insertAdjacentHTML('beforeend', ruleRowHtml('', null, null, true));
+    }
+    function collectRulesFromTbody(tbodyId) {
+      const tbody = document.getElementById(tbodyId);
+      const rows = tbody && tbody.querySelectorAll('tr') || [];
+      const rules = [];
+      rows.forEach(function(tr) {
+        const desc = (tr.querySelector('.rule-desc') && tr.querySelector('.rule-desc').value || '').trim();
+        const minEl = tr.querySelector('.rule-min');
+        const maxEl = tr.querySelector('.rule-max');
+        const min_price = minEl && minEl.value ? parseFloat(minEl.value) : null;
+        const max_price = maxEl && maxEl.value ? parseFloat(maxEl.value) : null;
+        rules.push({ description_keyword: desc || '', min_price: min_price, max_price: max_price });
+      });
+      return rules;
+    }
+    async function saveTaskEdit() {
+      const id = document.getElementById('edit-task-id').value;
+      const name = document.getElementById('edit-name').value.trim() || '';
+      const keyword = document.getElementById('edit-keyword').value.trim();
+      const refreshVal = parseInt(document.getElementById('edit-refresh-interval').value, 10);
+      const refresh_interval_sec = isNaN(refreshVal) ? 3 : Math.max(1, Math.min(60, refreshVal));
+      const run_mode = document.getElementById('edit-run_mode').value || 'from_app';
+      const rules = collectRulesFromTbody('edit-rules-tbody');
+      if (!keyword) { showMsg('搜索词不能为空', true); return; }
+      var phone_id = parseInt(document.getElementById('edit-task-phone_id').value, 10);
+      if (!phone_id) { showMsg('请选择设备', true); return; }
+      var channel = (document.getElementById('edit-task-channel') || {}).value || 'app';
+      const res = await apiFetch('/tasks/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, keyword, phone_id, channel, refresh_interval_sec, run_mode, rules }) });
+      if (!res.ok) { showMsg((await res.json()).detail || '保存失败', true); return; }
+      document.getElementById('edit-task-modal').classList.remove('show');
+      showMsg('已保存');
+      loadTasks();
+    }
+
+    function addNewRuleRow() {
+      document.getElementById('new-rules-tbody').insertAdjacentHTML('beforeend', ruleRowHtml('', null, null, true));
+    }
+    function openNewTaskModal() {
+      document.getElementById('new-task-name').value = '';
+      document.getElementById('new-task-keyword').value = '';
+      document.getElementById('new-task-refresh-interval').value = '3';
+      document.getElementById('new-task-run_mode').value = 'from_app';
+      var nc = document.getElementById('new-task-channel');
+      if (nc) nc.value = 'app';
+      filterNewTaskPhones();
+      const tbody = document.getElementById('new-rules-tbody');
+      tbody.innerHTML = '';
+      addNewRuleRow();
+      document.getElementById('new-task-modal').classList.add('show');
+    }
+    function closeNewTaskModal() {
+      document.getElementById('new-task-modal').classList.remove('show');
+    }
+    async function addTask() {
+      const phone_id = parseInt(document.getElementById('new-task-phone_id').value, 10);
+      const name = document.getElementById('new-task-name').value.trim() || '';
+      const keyword = document.getElementById('new-task-keyword').value.trim();
+      const refreshVal = parseInt(document.getElementById('new-task-refresh-interval').value, 10);
+      const refresh_interval_sec = isNaN(refreshVal) ? 3 : Math.max(1, Math.min(60, refreshVal));
+      const run_mode = document.getElementById('new-task-run_mode').value || 'from_app';
+      const rules = collectRulesFromTbody('new-rules-tbody');
+      if (!phone_id || !keyword) { showMsg('请选择手机并填写搜索词', true); return; }
+      if (!rules.length) { showMsg('请至少添加一条规则', true); return; }
+      const channel = (document.getElementById('new-task-channel') || {}).value || 'app';
+      const res = await apiFetch('/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone_id, name, keyword, channel, refresh_interval_sec, run_mode, rules }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { showMsg(data.detail || '创建失败', true); return; }
+      showMsg('已创建任务');
+      closeNewTaskModal();
+      loadTasks();
+    }
+
+    async function toggleTask(id, is_running) {
+      const res = await apiFetch('/tasks/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_running }) });
+      if (!res.ok) { showMsg((await res.json()).detail || '操作失败', true); return; }
+      showMsg(is_running ? '已启动抢购' : '已停止');
+      loadTasks();
+    }
+
+    async function dupTask(id) {
+      const res = await apiFetch('/tasks/' + id + '/duplicate', { method: 'POST' });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) {
+        showMsg(formatApiDetail(data.detail) || '复制失败', true);
+        return;
+      }
+      showMsg('已复制为新任务（ID ' + (data.id || '') + '），配置与原任务一致，默认未启动');
+      refreshTasksPanel();
+    }
+
+    async function delTask(id) {
+      if (!confirm('确定删除该任务？')) return;
+      const res = await apiFetch('/tasks/' + id, { method: 'DELETE' });
+      if (!res.ok) { showMsg((await res.json()).detail || '删除失败', true); return; }
+      showMsg('已删除');
+      loadTasks();
+    }
+
+    async function loadSummary() {
+      const task_id = document.getElementById('stats-task_id').value || '';
+      const url = task_id ? '/stats/summary?task_id=' + task_id : '/stats/summary';
+      const res = await apiFetch(url);
+      const data = res.ok ? await res.json() : null;
+      document.getElementById('stats-summary').innerHTML = data
+        ? `自己抢到：<strong>${data.grabbed_by_me}</strong>，被他人抢走：<strong>${data.grabbed_by_other}</strong>，合计：<strong>${data.total}</strong>`
+        : '加载失败';
+    }
+
+    let recordsList = [];
+    function toggleRecordsCheckAll(ck) {
+      document.querySelectorAll('.record-cb').forEach(el => { el.checked = ck.checked; });
+      updateRecordsBatchBtn();
+    }
+    function updateRecordsBatchBtn() {
+      const n = document.querySelectorAll('.record-cb:checked').length;
+      document.getElementById('records-batch-del-btn').style.display = n ? 'inline-block' : 'none';
+    }
+    async function deleteRecord(id) {
+      if (!confirm('确定删除该条记录？')) return;
+      const res = await apiFetch('/stats/records/' + id, { method: 'DELETE' });
+      if (!res.ok) { showMsg((await res.json()).detail || '删除失败', true); return; }
+      showMsg('已删除');
+      loadSummary(); loadRecords();
+    }
+    async function deleteRecordsBatch() {
+      const ids = document.querySelectorAll('.record-cb:checked');
+      if (!ids.length) return;
+      if (!confirm('确定删除选中的 ' + ids.length + ' 条记录？')) return;
+      const idList = Array.from(ids).map(el => el.value).join(',');
+      const res = await apiFetch('/stats/records?ids=' + encodeURIComponent(idList), { method: 'DELETE' });
+      if (!res.ok) { showMsg((await res.json()).detail || '删除失败', true); return; }
+      const data = await res.json();
+      showMsg('已删除 ' + (data.deleted || 0) + ' 条');
+      document.getElementById('records-check-all').checked = false;
+      loadSummary(); loadRecords();
+    }
+    function escapeAttr(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function copyDesc(cell) {
+      const raw = cell.getAttribute('data-desc') || '';
+      navigator.clipboard.writeText(raw).then(() => showMsg('已复制'), () => showMsg('复制失败', true));
+    }
+    let recordsPage = 1;
+    async function loadRecords() {
+      const task_id = document.getElementById('stats-task_id').value || '';
+      const status = document.getElementById('stats-status').value || '';
+      const page_size = parseInt(document.getElementById('records-page_size').value, 10) || 10;
+      let url = '/stats/records?page=' + recordsPage + '&page_size=' + page_size;
+      if (task_id) url += '&task_id=' + task_id;
+      if (status) url += '&status=' + status;
+      const res = await apiFetch(url);
+      const data = res.ok ? await res.json() : { items: [], total: 0, page: 1, page_size: 10 };
+      const list = data.items || [];
+      const total = data.total || 0;
+      const page = data.page || 1;
+      recordsList = list;
+      const taskLabel = (r) => (r.task_name && r.task_name.trim()) ? `${r.task_id} ${escapeHtml(r.task_name.trim())}` : `任务 ${r.task_id}`;
+      const fullTitle = (r) => (r.title || r.item_id || '');
+      const shortTitle = (r) => { const t = fullTitle(r); return t.length > 30 ? t.slice(0, 30) + '…' : t; };
+      document.getElementById('records-tbody').innerHTML = list.map(r =>
+        `<tr>
+          <td><input type="checkbox" class="record-cb" value="${r.id}" onclick="updateRecordsBatchBtn()"/></td>
+          <td>${r.id}</td>
+          <td>${taskLabel(r)}</td>
+          <td class="desc-cell" data-desc="${escapeAttr(fullTitle(r))}" onmouseenter="this.querySelector('.desc-popover-text').textContent=this.getAttribute('data-desc')||''">
+            <span class="desc-short">${escapeHtml(shortTitle(r))}</span>
+            <div class="desc-popover"><div class="desc-popover-text"></div><button type="button" class="small copy-btn" onclick="copyDesc(this.closest('.desc-cell'))">复制</button></div>
+          </td>
+          <td>${r.price != null ? r.price : '-'}</td>
+          <td><span class="badge ${r.status === 'grabbed_by_me' ? 'me' : 'other'}">${r.status === 'grabbed_by_me' ? '我抢到' : '被抢'}</span></td>
+          <td>${new Date(r.created_at).toLocaleString()}</td>
+          <td><button type="button" class="small danger" onclick="deleteRecord(${r.id})">删除</button></td>
+        </tr>`
+      ).join('') || '<tr><td colspan="8">暂无记录</td></tr>';
+      updateRecordsBatchBtn();
+      const totalPages = Math.max(1, Math.ceil(total / page_size));
+      let paginationHtml = '共 <strong>' + total + '</strong> 条';
+      if (total > 0) {
+        paginationHtml += ' · 第 ' + page + ' / ' + totalPages + ' 页 ';
+        if (page > 1) paginationHtml += '<button type="button" class="small" onclick="recordsPage=' + (page - 1) + ';loadRecords()">上一页</button> ';
+        if (page < totalPages) paginationHtml += '<button type="button" class="small" onclick="recordsPage=' + (page + 1) + ';loadRecords()">下一页</button>';
+      }
+      document.getElementById('records-pagination').innerHTML = paginationHtml;
+    }
+
+    let parsedPage = 1;
+    function toggleParsedCheckAll(ck) {
+      document.querySelectorAll('.parsed-cb').forEach(el => { el.checked = ck.checked; });
+      updateParsedBatchBtn();
+    }
+    function updateParsedBatchBtn() {
+      const n = document.querySelectorAll('.parsed-cb:checked').length;
+      document.getElementById('parsed-batch-del-btn').style.display = n ? 'inline-block' : 'none';
+    }
+    async function deleteParsed(id) {
+      if (!confirm('确定删除该条解析记录？')) return;
+      const res = await apiFetch('/stats/parsed/' + id, { method: 'DELETE' });
+      if (!res.ok) { showMsg((await res.json()).detail || '删除失败', true); return; }
+      showMsg('已删除');
+      loadParsed();
+    }
+    async function deleteParsedBatch() {
+      const ids = document.querySelectorAll('.parsed-cb:checked');
+      if (!ids.length) return;
+      if (!confirm('确定删除选中的 ' + ids.length + ' 条解析记录？')) return;
+      const idList = Array.from(ids).map(el => el.value).join(',');
+      const res = await apiFetch('/stats/parsed?ids=' + encodeURIComponent(idList), { method: 'DELETE' });
+      if (!res.ok) { showMsg((await res.json()).detail || '删除失败', true); return; }
+      const data = await res.json();
+      showMsg('已删除 ' + (data.deleted || 0) + ' 条');
+      document.getElementById('parsed-check-all').checked = false;
+      loadParsed();
+    }
+    async function loadParsed() {
+      const task_id = document.getElementById('parsed-task_id').value || '';
+      const page_size = parseInt(document.getElementById('parsed-page_size').value, 10) || 10;
+      let url = '/stats/parsed?page=' + parsedPage + '&page_size=' + page_size;
+      if (task_id) url += '&task_id=' + task_id;
+      const res = await apiFetch(url);
+      const data = res.ok ? await res.json() : { items: [], total: 0, page: 1, page_size: 10 };
+      const list = data.items || [];
+      const total = data.total || 0;
+      const page = data.page || 1;
+      const taskLabel = (r) => (r.task_name && r.task_name.trim()) ? (r.task_id + ' ' + escapeHtml(r.task_name.trim())) : ('任务 ' + r.task_id);
+      const descFull = (r) => (r.description || '');
+      const descShort = (r) => { const d = descFull(r); return d.length > 40 ? d.slice(0, 40) + '…' : d; };
+      document.getElementById('parsed-tbody').innerHTML = list.map(r =>
+        '<tr><td><input type="checkbox" class="parsed-cb" value="' + r.id + '" onclick="updateParsedBatchBtn()"/></td><td>' + r.id + '</td><td>' + taskLabel(r) + '</td><td class="desc-cell" data-desc="' + escapeAttr(descFull(r)) + '" onmouseenter="this.querySelector(\'.desc-popover-text\').textContent=this.getAttribute(\'data-desc\')||\'\'"><span class="desc-short">' + escapeHtml(descShort(r)) + '</span><div class="desc-popover"><div class="desc-popover-text"></div><button type="button" class="small copy-btn" onclick="copyDesc(this.closest(\'.desc-cell\'))">复制</button></div></td><td>' + (r.price != null ? r.price : '-') + '</td><td>' + new Date(r.created_at).toLocaleString() + '</td><td><button type="button" class="small danger" onclick="deleteParsed(' + r.id + ')">删除</button></td></tr>'
+      ).join('') || '<tr><td colspan="7">暂无解析商品</td></tr>';
+      updateParsedBatchBtn();
+      const totalPages = Math.max(1, Math.ceil(total / page_size));
+      let paginationHtml = '共 <strong>' + total + '</strong> 条';
+      if (total > 0) {
+        paginationHtml += ' · 第 ' + page + ' / ' + totalPages + ' 页 ';
+        if (page > 1) paginationHtml += '<button type="button" class="small" onclick="parsedPage=' + (page - 1) + ';loadParsed()">上一页</button> ';
+        if (page < totalPages) paginationHtml += '<button type="button" class="small" onclick="parsedPage=' + (page + 1) + ';loadParsed()">下一页</button>';
+      }
+      document.getElementById('parsed-pagination').innerHTML = paginationHtml;
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    async function init() {
+      const token = getToken();
+      if (!token) { showLogin(); return; }
+      const res = await apiFetch('/auth/me');
+      if (!res.ok) { clearToken(); showLogin(); return; }
+      currentUser = await res.json();
+      showApp();
+      // 登录态校验通过后再拉取业务数据，避免未登录时请求 /phones、/notifications 等
+      loadPhones();
+      showProfileCompleteModalIfNeeded();
+    }
+    init();
+  </script>
+</body>
+</html>

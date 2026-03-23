@@ -1,0 +1,66 @@
+{
+  "name": "xianyu-good-console",
+  "version": "1.0.0",
+  "description": "鲸吸购控制台（Mac 客户端，连接远端或本机 xianyu-good 服务）",
+  "main": "main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "sync-static": "node scripts/sync-static.js",
+    "start": "npm run sync-static && electron .",
+    "pack": "npm run build:installer",
+    "build:installer": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --publish never",
+    "build:dmg": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --publish never",
+    "build:pkg": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac pkg --publish never"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.xianyugood.console",
+    "productName": "鲸吸购控制台",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "compression": "maximum",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "settings.html",
+      "settings-preload.js",
+      "static/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "pkg",
+        "zip"
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 140,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  }
+}
