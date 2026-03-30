@@ -4,12 +4,13 @@
 import glob
 import os
 import sys
+from typing import Optional, Tuple
 
 _PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 _PY_TAG = "python%d.%d" % (sys.version_info.major, sys.version_info.minor)
 
 
-def _resolve_site_packages() -> tuple[str | None, str]:
+def _resolve_site_packages() -> Tuple[Optional[str], str]:
     """
     解析应加入 sys.path 的 site-packages，并返回 (路径或 None, 说明文案)。
     禁止把「另一 Python 版本」的 site-packages 塞进当前解释器，否则易表现为已 pip 仍 import 失败。
