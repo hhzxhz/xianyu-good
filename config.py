@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """项目配置：数据库路径、服务端口、闲鱼包名等"""
 
-from pydantic_settings import BaseSettings
 from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # 闲鱼 App 包名（正式环境）
@@ -10,7 +11,7 @@ XIANYU_PACKAGE = "com.taobao.idlefish"
 
 
 class Settings(BaseSettings):
-    """从环境变量或 .env 读取的配置"""
+    """仅从当前进程环境变量读取（export、systemd、Docker 等）；不加载项目根 .env。"""
     # 服务监听
     host: str = "0.0.0.0"
     port: int = 28080
@@ -41,9 +42,10 @@ class Settings(BaseSettings):
     # 所有 REST 接口统一挂载此前缀（须与 app/static/admin.html 内 FEISHU_API_PREFIX 一致；可通过环境变量 API_MOUNT_PREFIX 覆盖）
     api_mount_prefix: str = "/feishu-good"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=None,
+        env_file_encoding="utf-8",
+    )
 
 
 # 项目根目录，用于拼接 DB 路径
