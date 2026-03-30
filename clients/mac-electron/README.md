@@ -35,4 +35,15 @@ npm run build:pkg   # 仅 PKG
 
 ## 使用
 
-安装后启动应用，菜单 **鲸吸购 → 服务端地址…** 填写运行 `xianyu-good` 服务的地址（如 `http://192.168.1.8:28080`）。
+- **默认远程**：首次启动未配置时，REST 根地址为 **`https://legaogao.com`**（管理页内会自动拼接 `/feishu-good` 前缀）。
+- 若连本机服务，菜单 **鲸吸购 → 服务端地址…** 改为例如 `http://127.0.0.1:28080`。
+
+## `dist/` 无法覆盖打包时
+
+若旧产物 `dist/mac/*.app` 曾为 `root` 所有导致 `permission denied`，可先 `sudo rm -rf dist/mac`，或改用：
+
+```bash
+npm run build:installer:fresh
+```
+
+产物在 **`dist-build/`**（与 `dist/` 相同：dmg / pkg / zip）。

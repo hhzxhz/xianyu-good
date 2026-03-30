@@ -10,7 +10,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone
+from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone, GrabStatus
 from app.core.item_record_status import status_from_buy_attempt
 from app.core.xianyu_web import GoofishWebClient
 from app.core import web_runtime_session as wrs
@@ -38,7 +38,6 @@ async def run_web_task_loop(task_id: int, session_factory) -> None:
     与 buyer.run_task_loop 并列：仅处理 channel=web 的任务。
     使用 GoofishWebClient 轮询搜索页、匹配规则后进入详情尝试下单。
     """
-    seen_ids: Set[str] = set()
     _log(task_id, "INFO", "网页抢购循环已启动（goofish + Playwright）")
     while True:
         try:
@@ -131,13 +130,14 @@ async def run_web_task_loop(task_id: int, session_factory) -> None:
                         if saved:
                             _log(task_id, "INFO", "已保存 %s 条解析商品（去重后）", saved)
 
+                        seen_this_refresh: Set[str] = set()
                         for idx, item in enumerate(items):
                             raw = item.get("description") or ""
                             href = item.get("href") or ""
                             item_id = hashlib.sha256(href.encode()).hexdigest()[:32] if href else "idx_%s" % idx
-                            if item_id in seen_ids:
+                            if item_id in seen_this_refresh:
                                 continue
-                            seen_ids.add(item_id)
+                            seen_this_refresh.add(item_id)
                             price = item.get("price") if item.get("price") is not None else _parse_price(raw)
                             if not _item_matches_any_rule(raw, price, rules_list):
                                 continue
@@ -156,7 +156,11 @@ async def run_web_task_loop(task_id: int, session_factory) -> None:
                                     .limit(3)
                                 )
                                 recent_records = list(r2.scalars().all())
-                            recent_keys = {((rec.title or "").strip(), rec.price) for rec in recent_records}
+                            recent_keys = {
+                                ((rec.title or "").strip(), rec.price)
+                                for rec in recent_records
+                                if rec.status in (GrabStatus.GRABBED_BY_ME, GrabStatus.LOCKED_ITEM)
+                            }
                             if ((raw or "")[:512].strip(), price) in recent_keys:
                                 continue
 
@@ -164,7 +168,8 @@ async def run_web_task_loop(task_id: int, session_factory) -> None:
                             match_notifications.add_match_notification(task_id, (raw or "")[:512], price, matched_kw)
                             _log(task_id, "INFO", "网页通道：符合条件，进入详情尝试购买")
                             ok, msg = await client.goto_item_and_try_buy(href)
-                            _recently_purchased[(task_id, dedup_key)] = time.time()
+                            if ok:
+                                _recently_purchased[(task_id, dedup_key)] = time.time()
                             _log(task_id, "INFO", "抢购结果: %s", msg)
                             async with session_factory() as session:
                                 session.add(

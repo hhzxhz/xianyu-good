@@ -1065,13 +1065,42 @@ class XianyuDriver:
             pass
         return None
 
+    def _candidate_rv_child_indices(self, list_index: int, rv_index: Optional[int]) -> List[int]:
+        """
+        解析得到的 rv_index 与 u2 的 RecyclerView.child(index) 在部分页面会差 1（首项占位/合并头），
+        与「仅 list_index 时用 list_index+1」并存时，按序多候选可减少「未找到列表项」。
+        """
+        raw: List[int] = []
+        if rv_index is not None:
+            raw.extend([rv_index, rv_index + 1, list_index + 1, max(0, rv_index - 1), rv_index + 2])
+        else:
+            raw.extend([list_index + 1, list_index, list_index + 2])
+        out: List[int] = []
+        for x in raw:
+            if x >= 0 and x not in out:
+                out.append(x)
+        return out
+
+    def _list_rv_selectors_for_click(self) -> List[Any]:
+        """商品列表：主 id 与各兜底，顺序与历史逻辑一致。"""
+        return [
+            self._d(
+                packageName=self._pkg,
+                resourceId="com.taobao.idlefish:id/nested_recycler_view",
+                className="androidx.recyclerview.widget.RecyclerView",
+            ),
+            self._d(resourceIdMatches=".*nested.*", className="androidx.recyclerview.widget.RecyclerView"),
+            self._d(resourceIdMatches=".*list.*", className="androidx.recyclerview.widget.RecyclerView"),
+            self._d(className="androidx.recyclerview.widget.RecyclerView"),
+            self._d(className="android.widget.ListView"),
+        ]
+
     def click_item_at_index_and_buy(self, list_index: int = 0, rv_index: Optional[int] = None) -> Tuple[bool, str]:
         """
-        点击商品进入详情并尝试下单。优先用 rv_index（解析时保留的 RV 子节点下标），否则用 list_index+1。
+        点击商品进入详情并尝试下单。优先依据 XML 的 rv_index，并与 list_index+1 策略做多候选点击。
         返回 (是否成功点击并进入详情, 结果描述)
         """
         try:
-            # 解析当前列表，打印即将点击的商品描述、价格、idx
             try:
                 items = self.get_search_result_items(limit=20)
                 idx = rv_index if rv_index is not None else list_index
@@ -1090,52 +1119,41 @@ class XianyuDriver:
                     )
             except Exception:
                 pass
-            rv = self._d(
-                packageName=self._pkg,
-                resourceId="com.taobao.idlefish:id/nested_recycler_view",
-                className="androidx.recyclerview.widget.RecyclerView",
-            )
-            click_index = rv_index if rv_index is not None else (list_index + 1)
-            if rv.exists:
-                card = rv.child(index=click_index)
-                if card.exists:
-                    self._dump_ui_if_debug("06_before_click_card_%s" % click_index)
-                    try:
-                        info = card.info
-                        bounds = info.get("bounds") or info.get("visibleBounds")
-                        self._log_step("INFO", "点击第 %s 个商品进入详情（RV index=%s）bounds=%s",
-                                       list_index + 1, click_index, bounds)
-                    except Exception:
-                        self._log_step("INFO", "点击第 %s 个商品进入详情（RV index=%s）", list_index + 1, click_index)
-                    # 优先点击 card 下 focusable=true 的子节点（闲鱼卡内层才响应点击）
-                    click_target = self._find_focusable_child(card)
-                    if click_target is not None:
-                        click_target.click()
-                    else:
-                        card.click()
-                    time.sleep(0.3)
-                    self._dump_ui_if_debug("07_after_click_card_%s" % click_index)
-                    return self._do_buy_in_detail()
-            # 兜底：新发页等可能用其他 id，先试 resourceId 含 list/nested 的 RV，再试通用 RecyclerView
-            self._log_step("INFO", "未找到 nested_recycler_view，尝试其他列表控件 index=%s", click_index)
-            for rv_sel in [
-                self._d(resourceIdMatches=".*nested.*", className="androidx.recyclerview.widget.RecyclerView"),
-                self._d(resourceIdMatches=".*list.*", className="androidx.recyclerview.widget.RecyclerView"),
-                self._d(className="androidx.recyclerview.widget.RecyclerView"),
-                self._d(className="android.widget.ListView"),
-            ]:
-                if not rv_sel.exists:
+            click_indices = self._candidate_rv_child_indices(list_index, rv_index)
+            self._log_step("INFO", "列表项点击候选 child indices=%s (list_index=%s rv_index=%s)", click_indices, list_index, rv_index)
+            for rv in self._list_rv_selectors_for_click():
+                if not rv.exists:
                     continue
-                card = rv_sel.child(index=click_index)
-                if card.exists:
-                    click_target = self._find_focusable_child(card)
-                    if click_target is not None:
-                        click_target.click()
-                    else:
-                        card.click()
-                    time.sleep(0.3)
-                    return self._do_buy_in_detail()
-            self._log_step("WARNING", "未找到列表项")
+                for click_index in click_indices:
+                    card = rv.child(index=click_index)
+                    if not card.exists:
+                        continue
+                    try:
+                        self._dump_ui_if_debug("06_before_click_card_%s" % click_index)
+                        try:
+                            info = card.info
+                            bounds = info.get("bounds") or info.get("visibleBounds")
+                            self._log_step(
+                                "INFO",
+                                "点击列表项进入详情（list 序=%s RV.child=%s）bounds=%s",
+                                list_index + 1,
+                                click_index,
+                                bounds,
+                            )
+                        except Exception:
+                            self._log_step("INFO", "点击列表项进入详情（RV.child=%s）", click_index)
+                        click_target = self._find_focusable_child(card)
+                        if click_target is not None:
+                            click_target.click()
+                        else:
+                            card.click()
+                        time.sleep(0.3)
+                        self._dump_ui_if_debug("07_after_click_card_%s" % click_index)
+                        return self._do_buy_in_detail()
+                    except Exception as inner_e:
+                        self._log_step("WARNING", "尝试 index=%s 点击失败: %s，换下一候选", click_index, str(inner_e))
+                        continue
+            self._log_step("WARNING", "未找到可点击的列表项（已试 indices=%s）", click_indices)
             return False, "未找到列表项"
         except Exception as e:
             self._log_step("ERROR", "点击/下单异常: %s", str(e))

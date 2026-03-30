@@ -10,6 +10,7 @@
     "start": "npm run sync-static && electron .",
     "pack": "npm run build:installer",
     "build:installer": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --publish never",
+    "build:installer:fresh": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --publish never -c.directories.output=dist-build",
     "build:dmg": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --publish never",
     "build:pkg": "npm run sync-static && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac pkg --publish never"
   },

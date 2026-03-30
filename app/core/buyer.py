@@ -20,7 +20,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone
+from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone, GrabStatus
 from app.core.item_record_status import status_from_buy_attempt
 from app.core.device import connect_device
 from app.core.xianyu import XianyuDriver
@@ -168,7 +168,6 @@ async def run_task_loop(task_id: int, session_factory):
     单任务循环：拉取任务与设备，搜索关键词，检测新商品，符合条件则尝试购买并落库统计。
     session_factory 为可调用对象，返回 AsyncSession（用于在后台线程中创建新 session）。
     """
-    seen_ids: Set[str] = set()
     try:
         if (getattr(settings, "save_task_log", False) or getattr(settings, "debug_dump_ui", False)) and task_id not in _task_log_files:
             log_dir = BASE_DIR / "logs"
@@ -303,7 +302,8 @@ async def run_task_loop(task_id: int, session_factory):
                         else:
                             # 解析列表可能阻塞约 30s，放 executor 中并每 _STOP_CHECK_INTERVAL 秒检查 is_running，便于停止按钮尽快生效
                             loop = asyncio.get_running_loop()
-                            future = loop.run_in_executor(None, lambda: driver.get_search_result_items(limit=2))
+                            # 与前 3 条解析策略一致，避免匹配项在第 3 条及以后时被截断导致只识别不下单
+                            future = loop.run_in_executor(None, lambda: driver.get_search_result_items(limit=3))
                             items = []
                             while True:
                                 done, _ = await asyncio.wait(
@@ -366,13 +366,15 @@ async def run_task_loop(task_id: int, session_factory):
                         if saved:
                             _log(task_id, "INFO", "已保存 %s 条解析商品（去重后）", saved)
 
+                    # 每轮刷新单独去重：勿跨轮缓存 item_id，否则上一轮「未点中/未匹配」会永久阻止同一卡片再进下单逻辑
+                    seen_this_refresh: Set[str] = set()
                     for idx, item in enumerate(items):
                         # 兼容 XML 解析结果（仅有 description/price）与 u2 兜底（text/desc）
                         raw = (item.get("text") or "") + (item.get("desc") or "") or (item.get("description") or "")
                         item_id = str(hash(raw)) if raw else f"idx_{idx}"
-                        if item_id in seen_ids:
+                        if item_id in seen_this_refresh:
                             continue
-                        seen_ids.add(item_id)
+                        seen_this_refresh.add(item_id)
                         price = item.get("price") if item.get("price") is not None else _parse_price(raw)
                         if not _item_matches_any_rule(raw, price, rules_list):
                             continue
@@ -394,9 +396,14 @@ async def run_task_loop(task_id: int, session_factory):
                                 .limit(3)
                             )
                             recent_records = list(r.scalars().all())
-                        recent_keys = {((rec.title or "").strip(), rec.price) for rec in recent_records}
+                        # 仅「已确认由我抢到 / 锁定待确认」时跳过；被抢/失败记录允许下一轮重试
+                        recent_keys = {
+                            ((rec.title or "").strip(), rec.price)
+                            for rec in recent_records
+                            if rec.status in (GrabStatus.GRABBED_BY_ME, GrabStatus.LOCKED_ITEM)
+                        }
                         if ((raw or "")[:512].strip(), price) in recent_keys:
-                            _log(task_id, "INFO", "该商品已在最近购买记录中，跳过避免重复: 描述=%s 价格=%s", (raw or "")[:40], price)
+                            _log(task_id, "INFO", "该商品已在最近记录中（已抢到或锁定），跳过: 描述=%s 价格=%s", (raw or "")[:40], price)
                             continue
 
                         # 匹配到商品：暂停刷新任务，转入自动购买；并通知 Web 端弹框（带匹配关键字供高亮）
@@ -407,7 +414,9 @@ async def run_task_loop(task_id: int, session_factory):
                              idx + 1, item.get("rv_index"), (raw or "")[:50], price)
                         try:
                             ok, msg = driver.click_item_at_index_and_buy(idx, rv_index=item.get("rv_index"))
-                            _recently_purchased[(task_id, dedup_key)] = time.time()
+                            # 仅在自动化判定进入下单成功路径后节流，失败则下轮刷新可再试
+                            if ok:
+                                _recently_purchased[(task_id, dedup_key)] = time.time()
                             _log(task_id, "INFO", "抢购结果: %s", msg)
                             async with session_factory() as session:
                                 record = ItemRecord(

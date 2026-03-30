@@ -5,7 +5,8 @@ const { app, BrowserWindow, ipcMain, Menu, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
-const DEFAULT_API = "http://127.0.0.1:28080";
+/** 打包版默认指向线上服务根地址（无末尾 /；admin 内会再拼 /feishu-good） */
+const DEFAULT_API = "https://legaogao.com";
 
 function configPath() {
   return path.join(app.getPath("userData"), "server.json");
@@ -101,7 +102,7 @@ function createWindow() {
           label: "打开 API 文档（默认地址）",
           click: () => {
             const { apiBase } = readConfig();
-            shell.openExternal(apiBase + "/docs");
+            shell.openExternal(apiBase + "/feishu-good/docs");
           },
         },
       ],

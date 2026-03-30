@@ -21,6 +21,8 @@ __pycache__/
 # Mac 客户端构建产物与依赖
 clients/mac-electron/node_modules/
 clients/mac-electron/dist/
+clients/mac-electron/dist-build/
+clients/mac-electron/dist-legaogao/
 clients/mac-electron/static/
 
 # 日志与调试
