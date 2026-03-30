@@ -20,7 +20,8 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone, GrabStatus
+from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone
+from app.core.item_record_status import status_from_buy_attempt
 from app.core.device import connect_device
 from app.core.xianyu import XianyuDriver
 from app.core import task_console as console
@@ -414,7 +415,7 @@ async def run_task_loop(task_id: int, session_factory):
                                     item_id=item_id,
                                     title=raw[:512],
                                     price=price,
-                                    status=GrabStatus.GRABBED_BY_ME if ok else GrabStatus.GRABBED_BY_OTHER,
+                                    status=status_from_buy_attempt(ok, msg),
                                 )
                                 session.add(record)
                                 await session.commit()

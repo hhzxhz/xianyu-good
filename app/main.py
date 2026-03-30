@@ -25,6 +25,18 @@ from app.db.models import Task
 from app.api import phones, tasks, stats, notifications as notifications_api, web_session
 from app.api import auth, admin_users
 from app.core.auth import seed_admin_user
+from config import settings
+
+
+def _api_prefix() -> str:
+    """REST 根前缀，形如 /feishu-good（无尾部斜杠）。"""
+    p = (settings.api_mount_prefix or "").strip()
+    if not p or p == "/":
+        return ""
+    return p if p.startswith("/") else f"/{p}"
+
+
+API_PREFIX = _api_prefix()
 
 
 @asynccontextmanager
@@ -56,10 +68,17 @@ async def lifespan(app: FastAPI):
     # 任务在独立线程中运行（daemon），进程退出时自动结束，无需在此取消
 
 
+_docs = f"{API_PREFIX}/docs" if API_PREFIX else "/docs"
+_openapi = f"{API_PREFIX}/openapi.json" if API_PREFIX else "/openapi.json"
+_redoc = f"{API_PREFIX}/redoc" if API_PREFIX else "/redoc"
+
 app = FastAPI(
     title="闲鱼抢购后台",
     description="多手机接入，按关键词自动抢购新发商品，并统计抢到/被抢",
     lifespan=lifespan,
+    openapi_url=_openapi,
+    docs_url=_docs,
+    redoc_url=_redoc,
 )
 app.add_middleware(
     CORSMiddleware,
@@ -69,15 +88,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(admin_users.router)
-app.include_router(phones.router)
-app.include_router(tasks.router)
-app.include_router(web_session.router)
-# 与仅转发 /api/* 的反向代理兼容（管理页会探测 /web-session 与 /api/web-session）
-app.include_router(web_session.router, prefix="/api")
-app.include_router(stats.router)
-app.include_router(notifications_api.router)
+def _mount_api_routes() -> None:
+    """将所有业务 API 挂到统一前缀下（默认 /feishu-good，见 config.api_mount_prefix）。"""
+    p = API_PREFIX or ""
+    app.include_router(auth.router, prefix=p)
+    app.include_router(admin_users.router, prefix=p)
+    app.include_router(phones.router, prefix=p)
+    app.include_router(tasks.router, prefix=p)
+    app.include_router(web_session.router, prefix=p)
+    # 与仅转发 /api/* 的反向代理兼容（管理页会探测 .../web-session 与 .../api/web-session）
+    app.include_router(web_session.router, prefix=f"{p}/api" if p else "/api")
+    app.include_router(stats.router, prefix=p)
+    app.include_router(notifications_api.router, prefix=p)
+
+
+_mount_api_routes()
 
 # 后台管理页：静态资源与 /admin
 _static_dir = Path(__file__).resolve().parent / "static"
@@ -87,7 +112,13 @@ if _static_dir.is_dir():
 
 @app.get("/")
 async def root():
-    return {"service": "xianyu-good", "docs": "/docs", "admin": "/admin", "web": "/web"}
+    return {
+        "service": "xianyu-good",
+        "api_prefix": API_PREFIX or "/",
+        "docs": _docs,
+        "admin": "/admin",
+        "web": "/web",
+    }
 
 
 @app.get("/web")

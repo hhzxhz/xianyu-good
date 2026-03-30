@@ -10,7 +10,8 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone, GrabStatus
+from app.db.models import Task, TaskRule, ItemRecord, ParsedSearchItem, Phone
+from app.core.item_record_status import status_from_buy_attempt
 from app.core.xianyu_web import GoofishWebClient
 from app.core import web_runtime_session as wrs
 from app.core import notifications as match_notifications
@@ -172,7 +173,7 @@ async def run_web_task_loop(task_id: int, session_factory) -> None:
                                         item_id=item_id,
                                         title=raw[:512],
                                         price=price,
-                                        status=GrabStatus.GRABBED_BY_ME if ok else GrabStatus.GRABBED_BY_OTHER,
+                                        status=status_from_buy_attempt(ok, msg),
                                     )
                                 )
                                 await session.commit()

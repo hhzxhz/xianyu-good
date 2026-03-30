@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """从环境变量或 .env 读取的配置"""
     # 服务监听
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 28080
     # 数据库
     database_url: str = "sqlite+aiosqlite:///./xianyu_good.db"
     # 抢购轮询间隔（秒）
@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     playwright_user_agent: str = ""
     # 网页搜索基址（官方一般为 https://www.goofish.com）
     goofish_base_url: str = "https://www.goofish.com"
+    # 所有 REST 接口统一挂载此前缀（须与 app/static/admin.html 内 FEISHU_API_PREFIX 一致；可通过环境变量 API_MOUNT_PREFIX 覆盖）
+    api_mount_prefix: str = "/feishu-good"
 
     class Config:
         env_file = ".env"

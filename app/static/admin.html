@@ -64,6 +64,7 @@
     .badge.stop { background: var(--muted); color: #000; }
     .badge.me { background: var(--success); color: #000; }
     .badge.other { background: var(--danger); color: #fff; }
+    .badge.locked { background: rgba(245, 158, 11, 0.35); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.5); }
     /* 设备表：启用/停用状态与操作按钮分色，避免与删除红钮混淆 */
     .badge.phone-on { background: rgba(34, 197, 94, 0.35); color: #bbf7d0; border: 1px solid rgba(34, 197, 94, 0.45); }
     .badge.phone-off { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.35); }
@@ -241,7 +242,7 @@
       <nav class="nav">
         <a href="#" class="nav-link active" data-panel="phones" title="手机管理"><span class="nav-short">手</span><span class="nav-text">手机管理</span></a>
         <a href="#" class="nav-link" data-panel="tasks" title="任务管理"><span class="nav-short">任</span><span class="nav-text">任务管理</span></a>
-        <a href="#" class="nav-link" data-panel="stats" title="售出商品统计"><span class="nav-short">售</span><span class="nav-text">售出商品统计</span></a>
+        <a href="#" class="nav-link" data-panel="stats" title="售出商品"><span class="nav-short">售</span><span class="nav-text">售出商品</span></a>
         <a href="#" class="nav-link nav-admin" data-panel="users" style="display:none;" title="用户管理"><span class="nav-short">用</span><span class="nav-text">用户管理</span></a>
       </nav>
       <div class="sidebar-footer">
@@ -393,27 +394,27 @@
     </div>
   </div>
 
-  <!-- 售出商品统计 -->
+  <!-- 售出商品 -->
   <div id="panel-stats" class="panel card">
-    <h2>售出商品统计</h2>
+    <h2>售出商品</h2>
     <div id="stats-summary" style="font-size:0.875rem;color:var(--muted)">加载中…</div>
     <h2 style="margin-top:1rem">记录列表</h2>
     <div class="form-row">
       <label>任务</label><select id="stats-task_id"><option value="">全部</option></select>
-      <label>状态</label><select id="stats-status"><option value="">全部</option><option value="grabbed_by_me">我抢到</option><option value="grabbed_by_other">被抢</option></select>
+      <label>状态</label><select id="stats-status"><option value="">全部</option><option value="grabbed_by_me">我抢到</option><option value="locked_item">锁定商品</option><option value="grabbed_by_other">被抢</option></select>
       <label>每页</label><select id="records-page_size"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select>
       <button type="button" onclick="recordsPage=1;loadRecords()">查询</button>
       <button type="button" class="danger small" id="records-batch-del-btn" onclick="deleteRecordsBatch()" style="display:none">批量删除</button>
     </div>
     <table style="margin-top:0.5rem">
-      <thead><tr><th><input type="checkbox" id="records-check-all" onclick="toggleRecordsCheckAll(this)"/></th><th>ID</th><th>任务 ID/名称</th><th>标题/商品</th><th>价格</th><th>结果</th><th>时间</th><th>操作</th></tr></thead>
+      <thead><tr><th><input type="checkbox" id="records-check-all" onclick="toggleRecordsCheckAll(this)"/></th><th>ID</th><th>任务 ID/名称</th><th>标题/商品</th><th>价格</th><th>锁定商品</th><th>时间</th><th>操作</th></tr></thead>
       <tbody id="records-tbody"></tbody>
     </table>
     <div id="records-pagination" style="margin-top:0.5rem;font-size:0.875rem;color:var(--muted)"></div>
 
     <div class="stats-section-divider">
     <h2>解析到的商品</h2>
-    <p style="color:var(--muted);font-size:0.8rem;margin:0 0 0.5rem">任务运行后在新发页每 3s 解析前 3 个商品并<strong>记录到本统计页</strong>，同时输出到任务控制台；同商品不重复保存。</p>
+    <p style="color:var(--muted);font-size:0.8rem;margin:0 0 0.5rem">任务运行后在新发页每 3s 解析前 3 个商品并<strong>记录到本页</strong>，同时输出到任务控制台；同商品不重复保存。</p>
     <div class="form-row">
       <label>任务</label><select id="parsed-task_id"><option value="">全部</option></select>
       <label>每页</label><select id="parsed-page_size"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
@@ -447,7 +448,10 @@
 
   <!-- 管理员：用户管理 -->
   <div id="panel-users" class="panel card">
-    <h2>用户管理</h2>
+    <div class="panel-users-head" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem">
+      <h2 style="margin:0">用户管理</h2>
+      <button type="button" onclick="openCreateUserModal()">添加用户</button>
+    </div>
     <table>
       <thead><tr><th>ID</th><th>用户名</th><th>手机</th><th>邮箱</th><th>状态</th><th>管理员</th><th>操作</th></tr></thead>
       <tbody id="users-tbody"></tbody>
@@ -461,11 +465,28 @@
       <div class="form-row"><label>用户名</label><span id="edit-user-username" class="muted">-</span></div>
       <div class="form-row"><label>手机</label><input type="text" id="edit-user-phone" placeholder="可选"/></div>
       <div class="form-row"><label>邮箱</label><input type="text" id="edit-user-email" placeholder="可选"/></div>
+      <div class="form-row"><label>新密码</label><input type="password" id="edit-user-password" placeholder="不修改请留空" autocomplete="new-password"/></div>
       <div class="form-row"><label>状态</label><select id="edit-user-active"><option value="1">正常</option><option value="0">封禁</option></select></div>
       <div id="edit-user-admin-row" class="form-row" style="display:none"><label>管理员</label><select id="edit-user-admin"><option value="0">否</option><option value="1">是</option></select></div>
       <div class="form-row" style="margin-top:0.75rem">
         <button type="button" onclick="saveEditUser()">保存</button>
         <button type="button" class="danger" onclick="document.getElementById('edit-user-modal').classList.remove('show')">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="create-user-modal" class="modal">
+    <div class="modal-inner" style="max-width:400px">
+      <h2>添加用户</h2>
+      <div class="form-row"><label>用户名</label><input type="text" id="create-user-username" placeholder="2～64 字符" autocomplete="username"/></div>
+      <div class="form-row"><label>密码</label><input type="password" id="create-user-password" placeholder="至少 6 位" autocomplete="new-password"/></div>
+      <div class="form-row"><label>手机</label><input type="text" id="create-user-phone" placeholder="可选"/></div>
+      <div class="form-row"><label>邮箱</label><input type="text" id="create-user-email" placeholder="可选"/></div>
+      <div class="form-row"><label>状态</label><select id="create-user-active"><option value="1">正常</option><option value="0">封禁</option></select></div>
+      <div id="create-user-admin-row" class="form-row" style="display:none"><label>管理员</label><select id="create-user-admin"><option value="0">否</option><option value="1">是</option></select></div>
+      <div class="form-row" style="margin-top:0.75rem">
+        <button type="button" onclick="saveCreateUser()">创建</button>
+        <button type="button" class="danger" onclick="document.getElementById('create-user-modal').classList.remove('show')">取消</button>
       </div>
     </div>
   </div>
@@ -490,11 +511,15 @@
         }
       } catch (e2) {}
     })();
+    /** 须与后端 config.api_mount_prefix 一致 */
+    var FEISHU_API_PREFIX = '/feishu-good';
     var API = '';
     try {
-      API = (localStorage.getItem('xianyu_api_base') || '').replace(/\/$/, '');
+      var base = (localStorage.getItem('xianyu_api_base') || '').replace(/\/$/, '');
+      if (base.endsWith(FEISHU_API_PREFIX)) API = base;
+      else API = base + FEISHU_API_PREFIX;
     } catch (e3) {
-      API = '';
+      API = FEISHU_API_PREFIX;
     }
     const TOKEN_KEY = 'xianyu_admin_token';
     let currentUser = null;
@@ -696,6 +721,40 @@
         return '<tr><td>' + u.id + '</td><td>' + escapeHtml(u.username || '-') + '</td><td>' + escapeHtml(u.phone || '-') + '</td><td>' + escapeHtml(u.email || '-') + '</td><td>' + (u.is_active ? '正常' : '封禁') + '</td><td>' + (u.is_admin ? '是' : '-') + '</td><td>' + ops + '</td></tr>';
       }).join('') || '<tr><td colspan="7">暂无用户</td></tr>';
     }
+    function openCreateUserModal() {
+      document.getElementById('create-user-username').value = '';
+      document.getElementById('create-user-password').value = '';
+      document.getElementById('create-user-phone').value = '';
+      document.getElementById('create-user-email').value = '';
+      document.getElementById('create-user-active').value = '1';
+      var crow = document.getElementById('create-user-admin-row');
+      if (currentUser && currentUser.username === 'admin') {
+        crow.style.display = '';
+        document.getElementById('create-user-admin').value = '0';
+      } else {
+        crow.style.display = 'none';
+      }
+      document.getElementById('create-user-modal').classList.add('show');
+    }
+    async function saveCreateUser() {
+      var uname = document.getElementById('create-user-username').value.trim();
+      var pwd = document.getElementById('create-user-password').value;
+      if (uname.length < 2) { showMsg('用户名至少 2 字符', true); return; }
+      if (pwd.length < 6) { showMsg('密码至少 6 位', true); return; }
+      var phone = document.getElementById('create-user-phone').value.trim() || null;
+      var email = document.getElementById('create-user-email').value.trim() || null;
+      var is_active = document.getElementById('create-user-active').value === '1';
+      var payload = { username: uname, password: pwd, phone: phone, email: email, is_active: is_active };
+      if (currentUser && currentUser.username === 'admin') {
+        payload.is_admin = document.getElementById('create-user-admin').value === '1';
+      }
+      var res = await apiFetch('/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      var data = await res.json();
+      if (!res.ok) { showMsg(formatApiDetail(data.detail) || '创建失败', true); return; }
+      document.getElementById('create-user-modal').classList.remove('show');
+      showMsg('用户已创建');
+      loadAdminUsers();
+    }
     function openEditUserModal(userId) {
       var u = adminUserListCache.find(function(x) { return x.id === userId; });
       if (!u) return;
@@ -703,6 +762,7 @@
       document.getElementById('edit-user-username').textContent = u.username || '-';
       document.getElementById('edit-user-phone').value = u.phone || '';
       document.getElementById('edit-user-email').value = u.email || '';
+      document.getElementById('edit-user-password').value = '';
       document.getElementById('edit-user-active').value = u.is_active ? '1' : '0';
       var adminRow = document.getElementById('edit-user-admin-row');
       var adminSel = document.getElementById('edit-user-admin');
@@ -719,12 +779,15 @@
       var phone = document.getElementById('edit-user-phone').value.trim() || null;
       var email = document.getElementById('edit-user-email').value.trim() || null;
       var is_active = document.getElementById('edit-user-active').value === '1';
+      var newPwd = document.getElementById('edit-user-password').value.trim();
       var payload = { phone: phone, email: email, is_active: is_active };
+      if (newPwd) payload.password = newPwd;
       if (currentUser && currentUser.username === 'admin') {
         payload.is_admin = document.getElementById('edit-user-admin').value === '1';
       }
       var res = await apiFetch('/admin/users/' + userId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res.ok) { showMsg((await res.json()).detail || '保存失败', true); return; }
+      var errData = await res.json();
+      if (!res.ok) { showMsg(formatApiDetail(errData.detail) || '保存失败', true); return; }
       document.getElementById('edit-user-modal').classList.remove('show');
       showMsg('已保存');
       loadAdminUsers();
@@ -1409,8 +1472,9 @@
       const url = task_id ? '/stats/summary?task_id=' + task_id : '/stats/summary';
       const res = await apiFetch(url);
       const data = res.ok ? await res.json() : null;
+      const locked = (data.locked_item != null) ? data.locked_item : 0;
       document.getElementById('stats-summary').innerHTML = data
-        ? `自己抢到：<strong>${data.grabbed_by_me}</strong>，被他人抢走：<strong>${data.grabbed_by_other}</strong>，合计：<strong>${data.total}</strong>`
+        ? `自己抢到：<strong>${data.grabbed_by_me}</strong>，锁定商品：<strong>${locked}</strong>，被他人抢走：<strong>${data.grabbed_by_other}</strong>，合计：<strong>${data.total}</strong>`
         : '加载失败';
     }
 
@@ -1451,6 +1515,25 @@
       navigator.clipboard.writeText(raw).then(() => showMsg('已复制'), () => showMsg('复制失败', true));
     }
     let recordsPage = 1;
+    /** 售出记录列表：锁定商品列展示的样式与文案 */
+    function recordLockBadge(r) {
+      if (r.status === 'grabbed_by_me') return { cls: 'me', text: '我抢到' };
+      if (r.status === 'locked_item') return { cls: 'locked', text: '锁定商品' };
+      return { cls: 'other', text: '被抢' };
+    }
+    /** 将「锁定商品」记录改为「我抢到」 */
+    async function confirmRecordGrabbedByMe(id) {
+      var res = await apiFetch('/stats/records/' + id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'grabbed_by_me' }),
+      });
+      var data = await res.json();
+      if (!res.ok) { showMsg(formatApiDetail(data.detail) || '操作失败', true); return; }
+      showMsg('已标记为我抢到');
+      loadSummary();
+      loadRecords();
+    }
     async function loadRecords() {
       const task_id = document.getElementById('stats-task_id').value || '';
       const status = document.getElementById('stats-status').value || '';
@@ -1467,8 +1550,12 @@
       const taskLabel = (r) => (r.task_name && r.task_name.trim()) ? `${r.task_id} ${escapeHtml(r.task_name.trim())}` : `任务 ${r.task_id}`;
       const fullTitle = (r) => (r.title || r.item_id || '');
       const shortTitle = (r) => { const t = fullTitle(r); return t.length > 30 ? t.slice(0, 30) + '…' : t; };
-      document.getElementById('records-tbody').innerHTML = list.map(r =>
-        `<tr>
+      document.getElementById('records-tbody').innerHTML = list.map(r => {
+        var lb = recordLockBadge(r);
+        var grabBtn = r.status === 'locked_item'
+          ? '<button type="button" class="small" onclick="confirmRecordGrabbedByMe(' + r.id + ')">转为我抢到</button> '
+          : '';
+        return `<tr>
           <td><input type="checkbox" class="record-cb" value="${r.id}" onclick="updateRecordsBatchBtn()"/></td>
           <td>${r.id}</td>
           <td>${taskLabel(r)}</td>
@@ -1477,11 +1564,11 @@
             <div class="desc-popover"><div class="desc-popover-text"></div><button type="button" class="small copy-btn" onclick="copyDesc(this.closest('.desc-cell'))">复制</button></div>
           </td>
           <td>${r.price != null ? r.price : '-'}</td>
-          <td><span class="badge ${r.status === 'grabbed_by_me' ? 'me' : 'other'}">${r.status === 'grabbed_by_me' ? '我抢到' : '被抢'}</span></td>
+          <td><span class="badge ${lb.cls}">${lb.text}</span></td>
           <td>${new Date(r.created_at).toLocaleString()}</td>
-          <td><button type="button" class="small danger" onclick="deleteRecord(${r.id})">删除</button></td>
-        </tr>`
-      ).join('') || '<tr><td colspan="8">暂无记录</td></tr>';
+          <td>${grabBtn}<button type="button" class="small danger" onclick="deleteRecord(${r.id})">删除</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="8">暂无记录</td></tr>';
       updateRecordsBatchBtn();
       const totalPages = Math.max(1, Math.ceil(total / page_size));
       let paginationHtml = '共 <strong>' + total + '</strong> 条';

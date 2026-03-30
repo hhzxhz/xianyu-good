@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""统计：自己抢到的商品 / 被他人抢走的商品；按当前用户任务隔离"""
+"""统计：自己抢到 / 锁定商品 / 被他人抢走；按当前用户任务隔离"""
 
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,7 +9,14 @@ from sqlalchemy.orm import selectinload
 
 from app.db.database import get_db
 from app.db.models import ItemRecord, ParsedSearchItem, Task, Phone, GrabStatus, User
-from app.schemas.schemas import ItemRecordResp, ParsedSearchItemResp, ParsedListResp, RecordsListResp, StatsResp
+from app.schemas.schemas import (
+    ItemRecordResp,
+    ParsedSearchItemResp,
+    ParsedListResp,
+    RecordsListResp,
+    StatsResp,
+    ItemRecordConfirmMeReq,
+)
 from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -29,10 +36,11 @@ async def stats_summary(
     db: AsyncSession = Depends(get_db),
     current: User = Depends(get_current_user),
 ):
-    """汇总：自己抢到数、被抢走数、总数（仅当前用户任务）"""
+    """汇总：自己抢到、锁定商品、被抢走、总数（仅当前用户任务）"""
     visible = await _visible_task_ids(db, current)
     q = select(
         func.sum(case((ItemRecord.status == GrabStatus.GRABBED_BY_ME, 1), else_=0)).label("me"),
+        func.sum(case((ItemRecord.status == GrabStatus.LOCKED_ITEM, 1), else_=0)).label("locked"),
         func.sum(case((ItemRecord.status == GrabStatus.GRABBED_BY_OTHER, 1), else_=0)).label("other"),
         func.count(ItemRecord.id).label("total"),
     ).select_from(ItemRecord)
@@ -46,6 +54,7 @@ async def stats_summary(
     row = r.one()
     return StatsResp(
         grabbed_by_me=int(row.me or 0),
+        locked_item=int(row.locked or 0),
         grabbed_by_other=int(row.other or 0),
         total=int(row.total or 0),
     )
@@ -54,7 +63,7 @@ async def stats_summary(
 @router.get("/records", response_model=RecordsListResp)
 async def list_records(
     task_id: Optional[int] = Query(None),
-    status: Optional[str] = Query(None, description="grabbed_by_me / grabbed_by_other"),
+    status: Optional[str] = Query(None, description="grabbed_by_me / locked_item / grabbed_by_other"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页条数"),
     db: AsyncSession = Depends(get_db),
@@ -75,6 +84,9 @@ async def list_records(
     if status == "grabbed_by_me":
         q_count = q_count.where(ItemRecord.status == GrabStatus.GRABBED_BY_ME)
         q = q.where(ItemRecord.status == GrabStatus.GRABBED_BY_ME)
+    elif status == "locked_item":
+        q_count = q_count.where(ItemRecord.status == GrabStatus.LOCKED_ITEM)
+        q = q.where(ItemRecord.status == GrabStatus.LOCKED_ITEM)
     elif status == "grabbed_by_other":
         q_count = q_count.where(ItemRecord.status == GrabStatus.GRABBED_BY_OTHER)
         q = q.where(ItemRecord.status == GrabStatus.GRABBED_BY_OTHER)
@@ -96,6 +108,40 @@ async def list_records(
         for x in rows
     ]
     return RecordsListResp(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.patch("/records/{record_id}", response_model=ItemRecordResp)
+async def patch_item_record(
+    record_id: int,
+    body: ItemRecordConfirmMeReq,
+    db: AsyncSession = Depends(get_db),
+    current: User = Depends(get_current_user),
+):
+    """
+    将状态为「锁定商品」的记录改为「我抢到」；其它状态不允许通过本接口修改。
+    """
+    r = await db.execute(select(ItemRecord).where(ItemRecord.id == record_id).options(selectinload(ItemRecord.task)))
+    rec = r.scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    visible = await _visible_task_ids(db, current)
+    if visible is not None and rec.task_id not in visible:
+        raise HTTPException(status_code=403, detail="无权限操作")
+    if rec.status != GrabStatus.LOCKED_ITEM:
+        raise HTTPException(status_code=400, detail="仅「锁定商品」可转为我抢到")
+    rec.status = GrabStatus.GRABBED_BY_ME
+    await db.flush()
+    await db.refresh(rec)
+    return ItemRecordResp(
+        id=rec.id,
+        task_id=rec.task_id,
+        task_name=(rec.task.name if rec.task else None) or "",
+        item_id=rec.item_id,
+        title=rec.title or "",
+        price=rec.price,
+        status=rec.status.value,
+        created_at=rec.created_at,
+    )
 
 
 @router.delete("/records/{record_id}")

@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
-const DEFAULT_API = "http://127.0.0.1:8000";
+const DEFAULT_API = "http://127.0.0.1:28080";
 
 function configPath() {
   return path.join(app.getPath("userData"), "server.json");

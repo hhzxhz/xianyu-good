@@ -27,8 +27,9 @@ class User(Base):
 
 
 class GrabStatus(str, enum.Enum):
-    """抢购结果：自己抢到 / 被他人抢走"""
+    """抢购结果：自己抢到 / 锁定商品（待确认）/ 被他人抢走"""
     GRABBED_BY_ME = "grabbed_by_me"
+    LOCKED_ITEM = "locked_item"
     GRABBED_BY_OTHER = "grabbed_by_other"
 
 
@@ -95,8 +96,8 @@ class ItemRecord(Base):
     item_id = Column(String(128), nullable=False, comment="闲鱼商品 ID")
     title = Column(String(512), default="")
     price = Column(Float, default=None)
-    # 抢购结果
-    status = Column(SQLEnum(GrabStatus), nullable=False)
+    # 抢购结果（SQLite 用 VARCHAR 存枚举值，便于扩展 locked_item）
+    status = Column(SQLEnum(GrabStatus, native_enum=False, length=32), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship("Task", back_populates="records")

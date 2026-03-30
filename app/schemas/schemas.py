@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """API 请求/响应模型"""
 
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -44,12 +44,23 @@ class UserUpdateMe(BaseModel):
     email: Optional[str] = None
 
 
+class AdminUserCreate(BaseModel):
+    """管理员手动创建用户：用户名+密码登录，可选手机/邮箱"""
+    username: str
+    password: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    is_active: Optional[bool] = True
+    is_admin: Optional[bool] = False
+
+
 class AdminUserUpdate(BaseModel):
-    """管理员修改用户：封禁/启用、手机、邮箱；仅超级管理员可改 is_admin"""
+    """管理员修改用户：封禁/启用、手机、邮箱、重置密码；仅超级管理员可改 is_admin"""
     is_active: Optional[bool] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     is_admin: Optional[bool] = None
+    password: Optional[str] = None
 
 
 class TaskRuleItem(BaseModel):
@@ -187,10 +198,16 @@ class ParsedListResp(BaseModel):
 
 
 class StatsResp(BaseModel):
-    """抢购统计：自己抢到 / 被他人抢走数量"""
+    """抢购统计：自己抢到 / 锁定商品 / 被他人抢走数量"""
     grabbed_by_me: int
+    locked_item: int
     grabbed_by_other: int
     total: int
+
+
+class ItemRecordConfirmMeReq(BaseModel):
+    """将「锁定商品」记录标记为「我抢到」"""
+    status: Literal["grabbed_by_me"]
 
 
 class WebCurlApplyReq(BaseModel):

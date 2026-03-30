@@ -62,13 +62,13 @@ PORT=8002 .venv/bin/python main.py
 
 启动成功后访问：
 
-- **Web 入口说明页**：<http://127.0.0.1:8000/web>（功能说明与跳转后台）
-- **后台管理页**：<http://127.0.0.1:8000/admin>（手机管理、任务管理、统计）
+- **Web 入口说明页**：<http://127.0.0.1:28080/web>（功能说明与跳转后台）
+- **后台管理页**：<http://127.0.0.1:28080/admin>（手机管理、任务管理、统计）
 
 ### C-S 架构与 Mac 客户端
 
 - **服务端（S）**：仍在 **运行 `run.sh` / `main.py` 的机器** 上提供 REST + 静态页；负责数据库、任务轮询、ADB、Playwright 等。**抢购逻辑与数据均在服务端**，客户端只操作界面。
-- **客户端（C）**：目录 `clients/mac-electron`，为 **Electron 壳 + 本地加载 `admin.html`**，所有 API 请求发往你在菜单里配置的 **服务端根地址**（如 `http://192.168.1.10:8000`）。管理页通过 URL 参数 `?api=` 与 `localStorage` 中的 `xianyu_api_base` 指向该地址。
+- **客户端（C）**：目录 `clients/mac-electron`，为 **Electron 壳 + 本地加载 `admin.html`**，所有 API 请求发往你在菜单里配置的 **服务端根地址**（如 `http://192.168.1.10:28080`）。管理页通过 URL 参数 `?api=` 与 `localStorage` 中的 `xianyu_api_base` 指向该地址。
 - **本机浏览器直接用 `/admin`** 时无需配置，仍与以前一样同域访问。
 
 **Mac 上安装/开发客户端：**
@@ -108,8 +108,8 @@ npm run build:installer
 4. 打开后台 **手机管理** → 点 **创建/获取网页环境**，新建任务时 **通道** 选 **闲鱼网页** 并选择该环境。
 
 网页版依赖站点与接口，若 goofish 改版需调整 `app/core/xianyu_web.py`；自动下单受登录态与风控影响，不保证成功率。仅 Cookie 时若 MTOP 仍报登录异常，请改用 **A** 导出完整 `storage_state`。
-- 接口文档：<http://127.0.0.1:8000/docs>
-- 根路径：<http://127.0.0.1:8000/>
+- 接口文档：<http://127.0.0.1:28080/feishu-good/docs>
+- 根路径：<http://127.0.0.1:28080/>
 
 ### 1.5 配置
 
@@ -120,7 +120,7 @@ npm run build:installer
 
 常用项：
 
-- `port`：服务端口，默认 8000
+- `port`：服务端口，默认 28080
 - `database_url`：数据库连接，默认 `sqlite+aiosqlite:///./xianyu_good.db`
 - `poll_interval`：抢购轮询间隔（秒）
 - `search_cooldown`：单次搜索后等待刷新时间（秒）
@@ -164,7 +164,7 @@ npm run build:installer
 
 - **缺少 pkg_resources**：服务已改为启动时不依赖；若在「列设备/连设备」时报错，执行  
   `.venv/bin/pip install --force-reinstall setuptools` 后重启。
-- **端口被占用**：改 `PORT=8002` 再启动，或关闭占用 8000 的进程。
+- **端口被占用**：改 `PORT=其他端口` 再启动，或关闭占用 28080 的进程。
 - **不要用 sudo 运行**：用当前用户执行 `./run.sh` 即可。
 
 ---
